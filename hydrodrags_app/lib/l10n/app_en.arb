@@ -1,0 +1,314 @@
+{
+  "@@locale": "en",
+  "appTitle": "HydroDrags",
+  "@appTitle": {
+    "description": "The application title"
+  },
+  "appTagline": "Racer Registration & Event Management",
+  "@appTagline": {
+    "description": "Short tagline for the app"
+  },
+  "continueButton": "Continue",
+  "language": "Language",
+  "english": "English",
+  "spanish": "Español",
+  "welcome": "Welcome",
+  "continueAs": "Continue as",
+  "racer": "Racer",
+  "adminStaff": "Admin / Staff",
+  "spectator": "Spectator",
+  "phoneNumber": "Phone Number",
+  "email": "Email",
+  "sendCode": "Send Code",
+  "sendCodeSubtitle": "We'll send a verification code to your email",
+  "codeSent": "Code sent! Check your email",
+  "enterCode": "Enter Verification Code",
+  "enterCodeSubtitle": "Enter the 6-digit code sent to your email",
+  "codeRequired": "Please enter the verification code",
+  "invalidCode": "Invalid code. Please try again",
+  "resendCode": "Resend Code",
+  "didntReceiveCode": "Didn't receive a code?",
+  "codeExpired": "Code expired. Please request a new one",
+  "verify": "Verify",
+  "verifying": "Verifying...",
+  "sendingCode": "Sending code...",
+  "racerProfile": "Racer Profile",
+  "personalInfo": "Personal Information",
+  "firstName": "First Name",
+  "lastName": "Last Name",
+  "dateOfBirth": "Date of Birth",
+  "gender": "Gender",
+  "genderOptional": "Gender (Optional)",
+  "nationality": "Nationality",
+  "nationalityOptional": "Nationality (Optional)",
+  "contactInfo": "Contact Information",
+  "emergencyContact": "Emergency Contact",
+  "emergencyContactName": "Emergency Contact Name",
+  "emergencyContactPhone": "Emergency Contact Phone",
+  "address": "Address",
+  "street": "Street",
+  "city": "City",
+  "stateProvince": "State / Province",
+  "country": "Country",
+  "zipPostalCode": "ZIP / Postal Code",
+  "membershipDetails": "Membership Details",
+  "organization": "Organization / Association",
+  "membershipNumber": "Membership Number",
+  "membershipNumberOptional": "Membership Number (Optional)",
+  "classCategory": "Class / Category",
+  "next": "Next",
+  "previous": "Previous",
+  "save": "Save",
+  "cancel": "Cancel",
+  "edit": "Edit",
+  "events": "Events",
+  "activeEvents": "Active Events",
+  "eventName": "Event Name",
+  "location": "Location",
+  "date": "Date",
+  "registrationStatus": "Registration Status",
+  "open": "Open",
+  "closed": "Closed",
+  "viewDetails": "View Details",
+  "registerForEvent": "Register for Event",
+  "eventRegistration": "Event Registration",
+  "vehicleCraftInfo": "Vehicle / Craft Information",
+  "craftType": "Craft Type",
+  "make": "Make",
+  "model": "Model",
+  "engineClass": "Engine Class",
+  "modifications": "Modifications",
+  "classSelection": "Class Selection",
+  "raceOptions": "Race Options",
+  "numberOfEntries": "Number of Entries",
+  "heatPreferences": "Heat Preferences",
+  "transponderId": "Transponder / ID Number",
+  "reviewConfirm": "Review & Confirm",
+  "summary": "Summary",
+  "waiver": "Liability Waiver",
+  "waiverExplanation": "This waiver must be reviewed and accepted before participation.",
+  "viewWaiver": "View Waiver",
+  "downloadPdf": "Download PDF",
+  "iUnderstand": "I Understand",
+  "waiverSignature": "Waiver Signature",
+  "fullLegalName": "Full Legal Name",
+  "certifyAgree": "I certify that I have read and agree to the terms and conditions of this waiver.",
+  "signature": "Signature",
+  "submit": "Submit",
+  "registrationComplete": "Registration Complete",
+  "success": "Success",
+  "registrationId": "Registration ID",
+  "waiverStatus": "Waiver Status",
+  "signed": "Signed",
+  "viewRegistration": "View Registration",
+  "downloadWaiverPdf": "Download Waiver PDF",
+  "returnToDashboard": "Return to Event Dashboard",
+  "racerDashboard": "My Event Dashboard",
+  "registrationStatus": "Registration Status",
+  "classVehicleSummary": "Class & Vehicle Summary",
+  "heatAssignments": "Heat Assignments",
+  "bracketPosition": "Bracket Position",
+  "required": "Required",
+  "optional": "Optional",
+  "scrollToEnd": "Please scroll to the end of the waiver to continue",
+  "signIn": "Racer Sign In",
+  "signInSubtitle": "Enter your email to receive a verification code",
+  "email": "Email",
+  "emailHint": "Enter your email address",
+  "emailRequired": "Please enter your email address",
+  "invalidEmail": "Please enter a valid email address",
+  "or": "OR",
+  "continueAsSpectator": "Continue as Spectator",
+  "viewEventsWithoutAccount": "View events without an account",
+  "createAccount": "Create Account",
+  "signUp": "Sign Up",
+  "signUpSubtitle": "Create your racer account",
+  "confirmPassword": "Confirm Password",
+  "confirmPasswordHint": "Re-enter your password",
+  "confirmPasswordRequired": "Please confirm your password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "alreadyHaveAccount": "Already have an account?",
+  "dontHaveAccount": "Don't have an account?",
+  "signInHere": "Sign in here",
+  "createAccountButton": "Create Account",
+  "hydrodragsInfo": "HydroDrags Info",
+  "@hydrodragsInfo": {
+    "description": "Title for the info tab screen"
+  },
+  "eventTitle2026": "2026 Fueltech US Nationals World Championships",
+  "@eventTitle2026": {
+    "description": "Main event title displayed in hero section"
+  },
+  "itsTimeToSendIt": "It's Time To Send It",
+  "@itsTimeToSendIt": {
+    "description": "Event tagline"
+  },
+  "aboutHydrodrags": "About HydroDrags",
+  "@aboutHydrodrags": {
+    "description": "About section title"
+  },
+  "aboutParagraph1": "The event features the World's fastest PWC Drag Racers, that come from all over the USA and beyond! This event has produced World Speed Records in every Class, With Speeds of 143mph in the Unlimited Class. The Stock and Spec Classes and our newest class Turbo No Nitrous are featured on Saturday, and the Superstock and Unlimited Classes and Speed Ally are featured on Sunday.",
+  "@aboutParagraph1": {
+    "description": "First paragraph of about section"
+  },
+  "aboutParagraph2": "This is a fun event, filled with excitement and the adrenalin filled atmosphere providing some exciting racing, that also serves as an economic impact, with most of the competitors and their families, sponsors, and support crews coming from out of the area.",
+  "@aboutParagraph2": {
+    "description": "Second paragraph of about section"
+  },
+  "worldRecordSpeed": "World Record Speed",
+  "@worldRecordSpeed": {
+    "description": "World record speed info card title"
+  },
+  "worldRecordDescription": "The FASTEST ski on the water is held by Team CRT With The Worlds Fastest Unlimited Ski of 143mph!",
+  "@worldRecordDescription": {
+    "description": "World record speed description"
+  },
+  "ageRequirement": "Age Requirement",
+  "@ageRequirement": {
+    "description": "Age requirement info card title"
+  },
+  "ageRequirementDescription": "We love seeing young riders get interested in the event but the earliest you can compete with the big boys is 15 years old.",
+  "@ageRequirementDescription": {
+    "description": "Age requirement description"
+  },
+  "isjbaMembershipRequired": "ISJBA Membership Required",
+  "@isjbaMembershipRequired": {
+    "description": "ISJBA membership info card title"
+  },
+  "isjbaMembershipDescription": "All competitors must have a valid ISJBA membership at the time of the event.",
+  "@isjbaMembershipDescription": {
+    "description": "ISJBA membership description"
+  },
+  "locationVenue": "Location & Venue",
+  "@locationVenue": {
+    "description": "Location and venue section title"
+  },
+  "venueName": "Burt Aaronson South County Regional Park",
+  "@venueName": {
+    "description": "Main venue name"
+  },
+  "venueSubtitle": "Sunset Cove Amphitheater",
+  "@venueSubtitle": {
+    "description": "Venue subtitle/amphitheater name"
+  },
+  "venueAddress": "20405 Amphitheater Cir, Boca Raton, FL 33498",
+  "@venueAddress": {
+    "description": "Full venue address"
+  },
+  "venueDetailNoBleachers": "No bleacher seating - bring your own chairs and tents",
+  "@venueDetailNoBleachers": {
+    "description": "Venue detail about seating"
+  },
+  "venueDetailEarlyArrival": "Early arrival recommended to secure your spot",
+  "@venueDetailEarlyArrival": {
+    "description": "Venue detail about early arrival"
+  },
+  "venueDetailNoGlass": "No glass bottles allowed",
+  "@venueDetailNoGlass": {
+    "description": "Venue detail about glass bottles"
+  },
+  "venueDetailFreeParking": "Free spectator parking",
+  "@venueDetailFreeParking": {
+    "description": "Venue detail about parking"
+  },
+  "rulesRegulations": "Rules & Regulations",
+  "@rulesRegulations": {
+    "description": "Rules and regulations section title"
+  },
+  "rulesIntro": "We want to see new world records, but it is our priority to make sure everyone stays safe on a level playing field.",
+  "@rulesIntro": {
+    "description": "Introduction text for rules section"
+  },
+  "keyRules": "Key Rules",
+  "@keyRules": {
+    "description": "Key rules info card title"
+  },
+  "keyRulesDescription": "• NO SWITCHING OF PWC PERIOD! YOU RACE WHAT YOU REGISTER WITH.\n• Top 4 Skis Must Report within 5 Min To Tech Tent Following Their Race\n• 2 MIN COUNTDOWN From When Racer's name is Called over PA To Launchpad\n• Any Unsportsmanlike Conduct Will not be Tolerated\n• Anytime On the Water: Helmets and Life Jackets Required",
+  "@keyRulesDescription": {
+    "description": "List of key rules"
+  },
+  "viewFullRules": "View Full Rules & Regulations",
+  "@viewFullRules": {
+    "description": "Button text to view full rules"
+  },
+  "ourSponsors": "Our Sponsors",
+  "@ourSponsors": {
+    "description": "Sponsors section title"
+  },
+  "sponsorsIntro": "The HydroDrags US Nationals World Championship could not be possible without these sponsors.",
+  "@sponsorsIntro": {
+    "description": "Introduction text for sponsors section"
+  },
+  "sponsorFuelTech": "FuelTech",
+  "sponsorFloridaSkiRiders": "Florida Ski Riders",
+  "sponsorRacerH2O": "Racer H2O",
+  "sponsorBrowardMotorsports": "Broward Motorsports",
+  "sponsorAngelicaRacing": "Angelica Racing",
+  "sponsorFizzleRacing": "Fizzle Racing",
+  "sponsorJLPerformance": "JL Performance",
+  "sponsorHydroTurf": "Hydro-Turf",
+  "sponsorRivaRacing": "Riva Racing",
+  "sponsorProVRacing": "Pro V Racing",
+  "sponsorJetTribeRacing": "Jet Tribe Racing",
+  "sponsorISJBA": "ISJBA",
+  "mediaPartners": "Media Partners",
+  "@mediaPartners": {
+    "description": "Media partners section title"
+  },
+  "mediaPartnersIntro": "Catch all the action through our media partners!",
+  "@mediaPartnersIntro": {
+    "description": "Introduction text for media partners section"
+  },
+  "mediaRacerH2O": "RACER H2O",
+  "@mediaRacerH2O": {
+    "description": "Media partner name"
+  },
+  "mediaRacerH2ODescription": "Live streaming coverage bringing you watercraft racing coverage like no one else.",
+  "@mediaRacerH2ODescription": {
+    "description": "RACER H2O description"
+  },
+  "mediaFloridaSkiRiders": "Florida Ski Riders",
+  "@mediaFloridaSkiRiders": {
+    "description": "Media partner name"
+  },
+  "mediaFloridaSkiRidersDescription": "Creating videos and capturing images and memories of the event.",
+  "@mediaFloridaSkiRidersDescription": {
+    "description": "Florida Ski Riders description"
+  },
+  "mediaMVPProductions": "MVP Productions",
+  "@mediaMVPProductions": {
+    "description": "Media partner name"
+  },
+  "mediaMVPProductionsDescription": "Professional photography capturing life's best moments.",
+  "@mediaMVPProductionsDescription": {
+    "description": "MVP Productions description"
+  },
+  "mediaProRiderMagazine": "Pro Rider Magazine",
+  "@mediaProRiderMagazine": {
+    "description": "Media partner name"
+  },
+  "mediaProRiderMagazineDescription": "Written articles and amazing images in the magazine that started it all.",
+  "@mediaProRiderMagazineDescription": {
+    "description": "Pro Rider Magazine description"
+  },
+  "contactUs": "Contact Us",
+  "@contactUs": {
+    "description": "Contact section title"
+  },
+  "contactPhone": "Phone",
+  "@contactPhone": {
+    "description": "Phone contact label"
+  },
+  "contactPhoneNumber": "(863) 409-8780",
+  "@contactPhoneNumber": {
+    "description": "Contact phone number"
+  },
+  "contactEmail": "Email",
+  "@contactEmail": {
+    "description": "Email contact label"
+  },
+  "contactEmailAddress": "hydrodragsfl@gmail.com",
+  "@contactEmailAddress": {
+    "description": "Contact email address"
+  }
+}

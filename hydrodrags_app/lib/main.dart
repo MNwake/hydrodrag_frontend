@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+
+import 'l10n/app_localizations.dart';
+import 'theme/app_theme.dart';
+import 'services/language_service.dart';
+import 'services/app_state_service.dart';
+import 'services/auth_service.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_navigation_screen.dart';
+import 'screens/racer_profile_screen.dart';
+import 'screens/events_screen.dart';
+import 'screens/event_registration_screen.dart';
+import 'screens/waiver_overview_screen.dart';
+import 'screens/waiver_reading_screen.dart';
+import 'screens/waiver_signature_screen.dart';
+import 'screens/registration_complete_screen.dart';
+import 'screens/racer_dashboard_screen.dart';
+import 'models/event.dart';
+
+void main() {
+  runApp(const HydroDragsApp());
+}
+
+class HydroDragsApp extends StatelessWidget {
+  const HydroDragsApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LanguageService()),
+        ChangeNotifierProvider(create: (_) => AppStateService()),
+        ChangeNotifierProvider(create: (_) => AuthService()),
+      ],
+      child: Consumer2<LanguageService, AuthService>(
+        builder: (context, languageService, authService, child) {
+          return MaterialApp(
+            title: 'HydroDrags',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.system,
+            locale: languageService.currentLocale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const _AuthWrapper(),
+            routes: {
+              '/main': (context) => const MainNavigationScreen(),
+              '/racer-profile': (context) => const RacerProfileScreen(),
+              '/events': (context) => const EventsScreen(),
+              '/event-registration': (context) {
+                final event = ModalRoute.of(context)?.settings.arguments;
+                return EventRegistrationScreen(event: event is Event ? event : null);
+              },
+              '/waiver-overview': (context) => const WaiverOverviewScreen(),
+              '/waiver-reading': (context) => const WaiverReadingScreen(),
+              '/waiver-signature': (context) => const WaiverSignatureScreen(),
+              '/registration-complete': (context) => const RegistrationCompleteScreen(),
+              '/racer-dashboard': (context) => const RacerDashboardScreen(),
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Wrapper widget that checks auth status and routes accordingly
+class _AuthWrapper extends StatelessWidget {
+  const _AuthWrapper();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        // Show loading while checking auth status
+        if (authService.isLoading && authService.status == AuthStatus.unauthenticated) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        // Route based on auth status
+        if (authService.isAuthenticated) {
+          // User is authenticated, go to main navigation screen
+          return const MainNavigationScreen();
+        } else {
+          // User is not authenticated, show login
+          return const LoginScreen();
+        }
+      },
+    );
+  }
+}
