@@ -52,15 +52,32 @@
   "country": "Country",
   "zipPostalCode": "ZIP / Postal Code",
   "membershipDetails": "Membership Details",
+  "ihraMembership": "IHRA Membership",
   "organization": "Organization / Association",
   "membershipNumber": "Membership Number",
   "membershipNumberOptional": "Membership Number (Optional)",
+  "ihraMembershipNumberOptional": "IHRA Membership # (Optional)",
+  "ihraMembershipPurchasedAtOptional": "IHRA Membership Purchased At (Optional)",
   "classCategory": "Class / Category",
   "next": "Next",
   "previous": "Previous",
   "save": "Save",
   "cancel": "Cancel",
   "edit": "Edit",
+  "editName": "Edit Name",
+  "editPhone": "Edit Phone",
+  "profileImageUpdated": "Profile image updated",
+  "profileUpdated": "Profile updated",
+  "bio": "Bio",
+  "bioHint": "Tell us about yourself...",
+  "editBio": "Edit Bio",
+  "sponsors": "Sponsors",
+  "sponsorsHint": "List your sponsors (one per line)",
+  "editSponsors": "Edit Sponsors",
+  "banner": "Banner",
+  "editBanner": "Edit Banner",
+  "removeBanner": "Remove Banner",
+  "bannerImageUpdated": "Banner image updated",
   "events": "Events",
   "activeEvents": "Active Events",
   "eventName": "Event Name",
@@ -69,6 +86,7 @@
   "registrationStatus": "Registration Status",
   "open": "Open",
   "closed": "Closed",
+  "register": "Register",
   "viewDetails": "View Details",
   "registerForEvent": "Register for Event",
   "eventRegistration": "Event Registration",
@@ -104,6 +122,7 @@
   "downloadWaiverPdf": "Download Waiver PDF",
   "returnToDashboard": "Return to Event Dashboard",
   "racerDashboard": "My Event Dashboard",
+  "backToEvents": "Back to Events",
   "registrationStatus": "Registration Status",
   "classVehicleSummary": "Class & Vehicle Summary",
   "heatAssignments": "Heat Assignments",
@@ -310,5 +329,434 @@
   "contactEmailAddress": "hydrodragsfl@gmail.com",
   "@contactEmailAddress": {
     "description": "Contact email address"
-  }
+  },
+  "chooseFromGallery": "Choose from Gallery",
+  "@chooseFromGallery": {
+    "description": "Option to choose image from gallery"
+  },
+  "takeAPhoto": "Take a Photo",
+  "@takeAPhoto": {
+    "description": "Option to take a photo with camera"
+  },
+  "removePhoto": "Remove Photo",
+  "@removePhoto": {
+    "description": "Option to remove selected photo"
+  },
+  "changePhoto": "Change Photo",
+  "@changePhoto": {
+    "description": "Button to change profile photo"
+  },
+  "addPhoto": "Add Photo",
+  "@addPhoto": {
+    "description": "Button to add profile photo"
+  },
+  "selectDate": "Select date",
+  "@selectDate": {
+    "description": "Placeholder text for date picker"
+  },
+  "male": "Male",
+  "@male": {
+    "description": "Male gender option"
+  },
+  "female": "Female",
+  "@female": {
+    "description": "Female gender option"
+  },
+  "phoneHint": "(555) 123-4567",
+  "@phoneHint": {
+    "description": "Phone number input hint/placeholder"
+  },
+  "complete": "Complete",
+  "@complete": {
+    "description": "Button text to complete profile"
+  },
+  "errorPickingImage": "Error picking image: {error}",
+  "@errorPickingImage": {
+    "description": "Error message when image picker fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "proStock": "Pro Stock",
+  "@proStock": {
+    "description": "Pro Stock class category"
+  },
+  "proMod": "Pro Mod",
+  "@proMod": {
+    "description": "Pro Mod class category"
+  },
+  "topAlcohol": "Top Alcohol",
+  "@topAlcohol": {
+    "description": "Top Alcohol class category"
+  },
+  "competitionEliminator": "Competition Eliminator",
+  "@competitionEliminator": {
+    "description": "Competition Eliminator class category"
+  },
+  "superComp": "Super Comp",
+  "@superComp": {
+    "description": "Super Comp class category"
+  },
+  "errorSubmittingProfile": "Error submitting profile: {error}",
+  "@errorSubmittingProfile": {
+    "description": "Error message when profile submission fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "submittingProfile": "Submitting profile...",
+  "@submittingProfile": {
+    "description": "Loading message when submitting profile"
+  },
+  "streetHint": "Enter your street address",
+  "@streetHint": {
+    "description": "Hint text for street address field"
+  },
+  "zipHint": "Enter zip code first for better results",
+  "@zipHint": {
+    "description": "Hint text for zip/postal code field"
+  },
+  "pwcManagement": "PWC Management",
+  "@pwcManagement": {
+    "description": "Title for PWC management screen"
+  },
+  "addPWC": "Add PWC",
+  "@addPWC": {
+    "description": "Button to add a new PWC"
+  },
+  "pwcName": "PWC Name",
+  "pwcNameHint": "Enter a name for your PWC",
+  "editPWC": "Edit PWC",
+  "@editPWC": {
+    "description": "Title for editing a PWC"
+  },
+  "noPWCs": "No PWCs have been registered yet",
+  "@noPWCs": {
+    "description": "Message when user has no PWCs"
+  },
+  "addPWCToGetStarted": "Add your first personal watercraft to get started",
+  "@addPWCToGetStarted": {
+    "description": "Message encouraging user to add their first PWC"
+  },
+  "primary": "Primary",
+  "@primary": {
+    "description": "Label for primary PWC"
+  },
+  "setAsPrimary": "Set as Primary",
+  "@setAsPrimary": {
+    "description": "Action to set a PWC as primary"
+  },
+  "deletePWC": "Delete PWC",
+  "@deletePWC": {
+    "description": "Title for delete PWC confirmation dialog"
+  },
+  "deletePWCConfirmation": "Are you sure you want to delete this PWC? This action cannot be undone.",
+  "@deletePWCConfirmation": {
+    "description": "Confirmation message for deleting a PWC"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button text"
+  },
+  "pwcDeleted": "PWC deleted successfully",
+  "@pwcDeleted": {
+    "description": "Success message after deleting a PWC"
+  },
+  "errorDeletingPWC": "Error deleting PWC",
+  "@errorDeletingPWC": {
+    "description": "Error message when deleting PWC fails"
+  },
+  "errorSavingPWC": "Error saving PWC",
+  "@errorSavingPWC": {
+    "description": "Error message when saving PWC fails"
+  },
+  "error": "Error",
+  "@error": {
+    "description": "Generic error label"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "serverUnavailableTitle": "Server Unavailable",
+  "@serverUnavailableTitle": {
+    "description": "Title for server unavailable screen"
+  },
+  "serverUnavailableMessage": "Unable to connect to the server. Please check your connection and try again.",
+  "@serverUnavailableMessage": {
+    "description": "Message shown when server is unreachable"
+  },
+  "retryConnection": "Retry Connection",
+  "@retryConnection": {
+    "description": "Button to retry connecting to server"
+  },
+  "continueOffline": "Continue Offline",
+  "@continueOffline": {
+    "description": "Button to continue without server (e.g. logout)"
+  },
+  "selectMake": "Select Make",
+  "@selectMake": {
+    "description": "Placeholder for make dropdown"
+  },
+  "enterMake": "Enter Make",
+  "@enterMake": {
+    "description": "Hint for make text field"
+  },
+  "makeRequired": "Make is required",
+  "@makeRequired": {
+    "description": "Validation error for required make field"
+  },
+  "enterModel": "Enter Model",
+  "@enterModel": {
+    "description": "Hint for model text field"
+  },
+  "modelRequired": "Model is required",
+  "@modelRequired": {
+    "description": "Validation error for required model field"
+  },
+  "year": "Year",
+  "@year": {
+    "description": "Year label"
+  },
+  "enterYear": "Enter Year",
+  "@enterYear": {
+    "description": "Hint for year field"
+  },
+  "invalidYear": "Please enter a valid year",
+  "@invalidYear": {
+    "description": "Validation error for invalid year"
+  },
+  "selectEngineClass": "Select Engine Class",
+  "@selectEngineClass": {
+    "description": "Placeholder for engine class dropdown"
+  },
+  "engineSize": "Engine Size",
+  "@engineSize": {
+    "description": "Engine size label"
+  },
+  "enterEngineSize": "Enter Engine Size (e.g., 1100cc)",
+  "@enterEngineSize": {
+    "description": "Hint for engine size field"
+  },
+  "color": "Color",
+  "@color": {
+    "description": "Color label"
+  },
+  "enterColor": "Enter Color",
+  "@enterColor": {
+    "description": "Hint for color field"
+  },
+  "registrationNumber": "Registration Number",
+  "@registrationNumber": {
+    "description": "Registration number label"
+  },
+  "enterRegistrationNumber": "Enter Registration Number",
+  "@enterRegistrationNumber": {
+    "description": "Hint for registration number field"
+  },
+  "serialNumber": "Serial Number",
+  "@serialNumber": {
+    "description": "Serial number label"
+  },
+  "enterSerialNumber": "Enter Serial Number",
+  "@enterSerialNumber": {
+    "description": "Hint for serial number field"
+  },
+  "notes": "Notes",
+  "@notes": {
+    "description": "Notes label"
+  },
+  "additionalNotes": "Additional notes or custom modifications",
+  "@additionalNotes": {
+    "description": "Hint for notes field"
+  },
+  "setAsPrimaryPWC": "Set as Primary PWC",
+  "@setAsPrimaryPWC": {
+    "description": "Checkbox label for setting PWC as primary"
+  },
+  "primaryPWCDescription": "This will be your default PWC for race registrations",
+  "@primaryPWCDescription": {
+    "description": "Description for primary PWC checkbox"
+  },
+  "andMore": "{count} more",
+  "@andMore": {
+    "description": "Text showing additional items count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "registeredRacers": "Registered Racers",
+  "@registeredRacers": {
+    "description": "Title for registered racers section"
+  },
+  "noRacersRegistered": "No racers registered yet.",
+  "@noRacersRegistered": {
+    "description": "Message when no racers have registered for an event"
+  },
+  "selectClassAndPWC": "Select Class & PWC",
+  "@selectClassAndPWC": {
+    "description": "Title for registration step 1"
+  },
+  "selectClassAndPWCDescription": "Choose your racing class and the PWC you'll be racing with.",
+  "@selectClassAndPWCDescription": {
+    "description": "Description for class and PWC selection"
+  },
+  "selectPWC": "Select Personal Watercraft",
+  "@selectPWC": {
+    "description": "Label for PWC selection"
+  },
+  "pwcRequired": "Please select a PWC",
+  "@pwcRequired": {
+    "description": "Error message when PWC is not selected"
+  },
+  "noPWCsFound": "No PWCs Found",
+  "@noPWCsFound": {
+    "description": "Message when user has no PWCs"
+  },
+  "addPWCFirst": "You need to add a PWC to your account before registering for an event.",
+  "@addPWCFirst": {
+    "description": "Message prompting user to add PWC first"
+  },
+  "classDivision": "Class / Division",
+  "@classDivision": {
+    "description": "Label for class/division selection"
+  },
+  "selectClassDivision": "Select Class / Division",
+  "@selectClassDivision": {
+    "description": "Hint for class division dropdown"
+  },
+  "classDivisionHelper": "Choose the racing class you'll compete in",
+  "@classDivisionHelper": {
+    "description": "Helper text for class division selection"
+  },
+  "classDivisionRequired": "Class/Division is required",
+  "@classDivisionRequired": {
+    "description": "Validation error for class division"
+  },
+  "selectedPWC": "Selected PWC",
+  "@selectedPWC": {
+    "description": "Label for selected PWC summary"
+  },
+  "transponderId": "Transponder ID",
+  "@transponderId": {
+    "description": "Label for transponder ID field"
+  },
+  "transponderIdHint": "Enter your transponder ID (optional)",
+  "@transponderIdHint": {
+    "description": "Hint for transponder ID field"
+  },
+  "proceedingToWaiver": "Proceeding to waiver...",
+  "@proceedingToWaiver": {
+    "description": "Message when navigating to waiver"
+  },
+  "paymentStep": "Payment",
+  "@paymentStep": {
+    "description": "Title for payment step"
+  },
+  "paymentStepDescription": "Payment integration will be available soon.",
+  "@paymentStepDescription": {
+    "description": "Description for payment step placeholder"
+  },
+  "continueToWaiver": "Continue to Waiver",
+  "@continueToWaiver": {
+    "description": "Button text to proceed to waiver"
+  },
+  "completePayment": "Complete Payment",
+  "@completePayment": {
+    "description": "Button text to complete payment"
+  },
+  "paymentNotYetImplemented": "Payment integration coming soon",
+  "@paymentNotYetImplemented": {
+    "description": "Message when payment is not yet implemented"
+  },
+  "unknownError": "An unknown error occurred",
+  "@unknownError": {
+    "description": "Generic error message"
+  },
+  "networkError": "Network connection error. Please check your internet connection.",
+  "@networkError": {
+    "description": "Network error message"
+  },
+  "timeoutError": "Request timed out. Please try again.",
+  "@timeoutError": {
+    "description": "Timeout error message"
+  },
+  "serverError": "Server error. Please try again later.",
+  "@serverError": {
+    "description": "Server error message"
+  },
+  "unauthorizedError": "Authentication failed. Please log in again.",
+  "@unauthorizedError": {
+    "description": "Unauthorized error message"
+  },
+  "notFoundError": "Resource not found.",
+  "@notFoundError": {
+    "description": "Not found error message"
+  },
+  "validationError": "Invalid data provided. Please check your input.",
+  "@validationError": {
+    "description": "Validation error message"
+  },
+  "rateLimitError": "Too many requests. Please wait a moment and try again.",
+  "@rateLimitError": {
+    "description": "Rate limit error message"
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "OK button text"
+  },
+  "signOut": "Sign Out",
+  "@signOut": {
+    "description": "Sign out button text"
+  },
+  "signOutConfirmation": "Are you sure you want to sign out?",
+  "@signOutConfirmation": {
+    "description": "Sign out confirmation message"
+  },
+  "importantInformation": "Important Information",
+  "@importantInformation": {
+    "description": "Title for important information section"
+  },
+  "readWaiverCarefully": "Read the full waiver carefully before signing",
+  "@readWaiverCarefully": {
+    "description": "Message about reading waiver carefully"
+  },
+  "languageToggleHint": "You can change the language using the toggle in the app bar",
+  "@languageToggleHint": {
+    "description": "Hint about language toggle"
+  },
+  "downloadPdfComingSoon": "PDF download coming soon",
+  "@downloadPdfComingSoon": {
+    "description": "Message when PDF download is not yet available"
+  },
+  "viewRegistrationComingSoon": "Registration details coming soon",
+  "@viewRegistrationComingSoon": {
+    "description": "Message when registration details view is not yet available"
+  },
+  "racer": "Racer",
+  "@racer": {
+    "description": "Label for racer"
+  },
+  "addClassEntry": "Add another class",
+  "removeClassEntry": "Remove",
+  "purchaseIhraMembershipWithRegistration": "Purchase IHRA membership with registration",
+  "validIhraMembershipDescription": "Valid IHRA membership requires a membership number and purchase within this calendar year. Add membership purchase to your registration if needed.",
+  "spectatorDayPasses": "Additional day passes (spectator tickets)",
+  "spectatorDayPassesDescription": "Purchase additional day passes for spectators before checkout.",
+  "dayPassesQuantity": "Number of day passes",
+  "spectatorSingleDayPass": "Single day pass ($30)",
+  "spectatorWeekendPass": "Weekend pass ($40)",
+  "classesAndPwc": "Classes & PWC",
+  "checkout": "Checkout",
+  "orderSummary": "Order Summary",
+  "total": "Total",
+  "payWithPayPal": "Pay with PayPal",
+  "afterPayPalReturn": "After completing payment in the browser, return to this app and tap below.",
+  "iveCompletedPayment": "I've completed payment"
 }

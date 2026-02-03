@@ -46,15 +46,32 @@
   "country": "País",
   "zipPostalCode": "Código Postal",
   "membershipDetails": "Detalles de Membresía",
+  "ihraMembership": "Membresía IHRA",
   "organization": "Organización / Asociación",
   "membershipNumber": "Número de Membresía",
   "membershipNumberOptional": "Número de Membresía (Opcional)",
+  "ihraMembershipNumberOptional": "Número de Membresía IHRA # (Opcional)",
+  "ihraMembershipPurchasedAtOptional": "Fecha de compra de membresía IHRA (Opcional)",
   "classCategory": "Clase / Categoría",
   "next": "Siguiente",
   "previous": "Anterior",
   "save": "Guardar",
   "cancel": "Cancelar",
   "edit": "Editar",
+  "editName": "Editar Nombre",
+  "editPhone": "Editar Teléfono",
+  "profileImageUpdated": "Imagen de perfil actualizada",
+  "profileUpdated": "Perfil actualizado",
+  "bio": "Biografía",
+  "bioHint": "Cuéntanos sobre ti...",
+  "editBio": "Editar Biografía",
+  "sponsors": "Patrocinadores",
+  "sponsorsHint": "Lista tus patrocinadores (uno por línea)",
+  "editSponsors": "Editar Patrocinadores",
+  "banner": "Banner",
+  "editBanner": "Editar Banner",
+  "removeBanner": "Eliminar Banner",
+  "bannerImageUpdated": "Imagen de banner actualizada",
   "events": "Eventos",
   "activeEvents": "Eventos Activos",
   "eventName": "Nombre del Evento",
@@ -63,6 +80,7 @@
   "registrationStatus": "Estado de Registro",
   "open": "Abierto",
   "closed": "Cerrado",
+  "register": "Registrarse",
   "viewDetails": "Ver Detalles",
   "registerForEvent": "Registrarse para el Evento",
   "eventRegistration": "Registro de Evento",
@@ -98,6 +116,7 @@
   "downloadWaiverPdf": "Descargar PDF de Renuncia",
   "returnToDashboard": "Volver al Panel de Eventos",
   "racerDashboard": "Mi Panel de Eventos",
+  "backToEvents": "Volver a Eventos",
   "classVehicleSummary": "Resumen de Clase y Vehículo",
   "heatAssignments": "Asignaciones de Serie",
   "bracketPosition": "Posición en el Bracket",
@@ -177,5 +196,387 @@
   "contactPhone": "Teléfono",
   "contactPhoneNumber": "(863) 409-8780",
   "contactEmail": "Correo Electrónico",
-  "contactEmailAddress": "hydrodragsfl@gmail.com"
+  "contactEmailAddress": "hydrodragsfl@gmail.com",
+  "chooseFromGallery": "Elegir de la Galería",
+  "takeAPhoto": "Tomar una Foto",
+  "removePhoto": "Eliminar Foto",
+  "changePhoto": "Cambiar Foto",
+  "addPhoto": "Agregar Foto",
+  "selectDate": "Seleccionar fecha",
+  "male": "Masculino",
+  "female": "Femenino",
+  "phoneHint": "(555) 123-4567",
+  "complete": "Completar",
+  "errorPickingImage": "Error al seleccionar imagen: {error}",
+  "@errorPickingImage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "proStock": "Pro Stock",
+  "proMod": "Pro Mod",
+  "topAlcohol": "Top Alcohol",
+  "competitionEliminator": "Competition Eliminator",
+  "superComp": "Super Comp",
+  "errorSubmittingProfile": "Error al enviar perfil: {error}",
+  "@errorSubmittingProfile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "submittingProfile": "Enviando perfil...",
+  "@submittingProfile": {
+    "description": "Mensaje de carga al enviar perfil"
+  },
+  "streetHint": "Ingrese su dirección",
+  "@streetHint": {
+    "description": "Texto de sugerencia para el campo de dirección"
+  },
+  "zipHint": "Ingrese el código postal primero para mejores resultados",
+  "@zipHint": {
+    "description": "Texto de sugerencia para el campo de código postal"
+  },
+  "pwcManagement": "Gestión de PWC",
+  "@pwcManagement": {
+    "description": "Título para la pantalla de gestión de PWC"
+  },
+  "addPWC": "Agregar PWC",
+  "@addPWC": {
+    "description": "Botón para agregar un nuevo PWC"
+  },
+  "pwcName": "Nombre del PWC",
+  "pwcNameHint": "Ingrese un nombre para su PWC",
+  "editPWC": "Editar PWC",
+  "@editPWC": {
+    "description": "Título para editar un PWC"
+  },
+  "noPWCs": "No hay PWC registrados aún",
+  "@noPWCs": {
+    "description": "Mensaje cuando el usuario no tiene PWC"
+  },
+  "addPWCToGetStarted": "Agregue su primera embarcación personal para comenzar",
+  "@addPWCToGetStarted": {
+    "description": "Mensaje animando al usuario a agregar su primer PWC"
+  },
+  "primary": "Principal",
+  "@primary": {
+    "description": "Etiqueta para PWC principal"
+  },
+  "setAsPrimary": "Establecer como Principal",
+  "@setAsPrimary": {
+    "description": "Acción para establecer un PWC como principal"
+  },
+  "deletePWC": "Eliminar PWC",
+  "@deletePWC": {
+    "description": "Título para el diálogo de confirmación de eliminación de PWC"
+  },
+  "deletePWCConfirmation": "¿Está seguro de que desea eliminar este PWC? Esta acción no se puede deshacer.",
+  "@deletePWCConfirmation": {
+    "description": "Mensaje de confirmación para eliminar un PWC"
+  },
+  "delete": "Eliminar",
+  "@delete": {
+    "description": "Texto del botón eliminar"
+  },
+  "pwcDeleted": "PWC eliminado exitosamente",
+  "@pwcDeleted": {
+    "description": "Mensaje de éxito después de eliminar un PWC"
+  },
+  "errorDeletingPWC": "Error al eliminar PWC",
+  "@errorDeletingPWC": {
+    "description": "Mensaje de error cuando falla la eliminación de PWC"
+  },
+  "errorSavingPWC": "Error al guardar PWC",
+  "@errorSavingPWC": {
+    "description": "Mensaje de error cuando falla el guardado de PWC"
+  },
+  "error": "Error",
+  "@error": {
+    "description": "Etiqueta de error genérica"
+  },
+  "retry": "Reintentar",
+  "@retry": {
+    "description": "Texto del botón reintentar"
+  },
+  "serverUnavailableTitle": "Servidor no disponible",
+  "@serverUnavailableTitle": {
+    "description": "Título de la pantalla de servidor no disponible"
+  },
+  "serverUnavailableMessage": "No se puede conectar al servidor. Por favor verifique su conexión e intente de nuevo.",
+  "@serverUnavailableMessage": {
+    "description": "Mensaje cuando el servidor no está disponible"
+  },
+  "retryConnection": "Reintentar conexión",
+  "@retryConnection": {
+    "description": "Botón para reintentar conectar al servidor"
+  },
+  "continueOffline": "Continuar sin conexión",
+  "@continueOffline": {
+    "description": "Botón para continuar sin servidor (ej. cerrar sesión)"
+  },
+  "selectMake": "Seleccionar Marca",
+  "@selectMake": {
+    "description": "Placeholder para el menú desplegable de marca"
+  },
+  "enterMake": "Ingresar Marca",
+  "@enterMake": {
+    "description": "Sugerencia para el campo de texto de marca"
+  },
+  "makeRequired": "La marca es requerida",
+  "@makeRequired": {
+    "description": "Error de validación para el campo de marca requerido"
+  },
+  "enterModel": "Ingresar Modelo",
+  "@enterModel": {
+    "description": "Sugerencia para el campo de texto de modelo"
+  },
+  "modelRequired": "El modelo es requerido",
+  "@modelRequired": {
+    "description": "Error de validación para el campo de modelo requerido"
+  },
+  "year": "Año",
+  "@year": {
+    "description": "Etiqueta de año"
+  },
+  "enterYear": "Ingresar Año",
+  "@enterYear": {
+    "description": "Sugerencia para el campo de año"
+  },
+  "invalidYear": "Por favor ingrese un año válido",
+  "@invalidYear": {
+    "description": "Error de validación para año inválido"
+  },
+  "selectEngineClass": "Seleccionar Clase de Motor",
+  "@selectEngineClass": {
+    "description": "Placeholder para el menú desplegable de clase de motor"
+  },
+  "engineSize": "Tamaño del Motor",
+  "@engineSize": {
+    "description": "Etiqueta de tamaño del motor"
+  },
+  "enterEngineSize": "Ingresar Tamaño del Motor (ej., 1100cc)",
+  "@enterEngineSize": {
+    "description": "Sugerencia para el campo de tamaño del motor"
+  },
+  "color": "Color",
+  "@color": {
+    "description": "Etiqueta de color"
+  },
+  "enterColor": "Ingresar Color",
+  "@enterColor": {
+    "description": "Sugerencia para el campo de color"
+  },
+  "registrationNumber": "Número de Registro",
+  "@registrationNumber": {
+    "description": "Etiqueta de número de registro"
+  },
+  "enterRegistrationNumber": "Ingresar Número de Registro",
+  "@enterRegistrationNumber": {
+    "description": "Sugerencia para el campo de número de registro"
+  },
+  "serialNumber": "Número de Serie",
+  "@serialNumber": {
+    "description": "Etiqueta de número de serie"
+  },
+  "enterSerialNumber": "Ingresar Número de Serie",
+  "@enterSerialNumber": {
+    "description": "Sugerencia para el campo de número de serie"
+  },
+  "notes": "Notas",
+  "@notes": {
+    "description": "Etiqueta de notas"
+  },
+  "additionalNotes": "Notas adicionales o modificaciones personalizadas",
+  "@additionalNotes": {
+    "description": "Sugerencia para el campo de notas"
+  },
+  "setAsPrimaryPWC": "Establecer como PWC Principal",
+  "@setAsPrimaryPWC": {
+    "description": "Etiqueta de casilla de verificación para establecer PWC como principal"
+  },
+  "primaryPWCDescription": "Este será su PWC predeterminado para registros de carreras",
+  "@primaryPWCDescription": {
+    "description": "Descripción para la casilla de verificación de PWC principal"
+  },
+  "andMore": "{count} más",
+  "@andMore": {
+    "description": "Texto que muestra el conteo de elementos adicionales",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "registeredRacers": "Corredores Registrados",
+  "@registeredRacers": {
+    "description": "Título para la sección de corredores registrados"
+  },
+  "noRacersRegistered": "Aún no hay corredores registrados.",
+  "@noRacersRegistered": {
+    "description": "Mensaje cuando no hay corredores registrados para un evento"
+  },
+  "selectClassAndPWC": "Seleccionar Clase y PWC",
+  "@selectClassAndPWC": {
+    "description": "Título para el paso 1 de registro"
+  },
+  "selectClassAndPWCDescription": "Elija su clase de carrera y el PWC con el que competirá.",
+  "@selectClassAndPWCDescription": {
+    "description": "Descripción para la selección de clase y PWC"
+  },
+  "selectPWC": "Seleccionar Embarcación Personal",
+  "@selectPWC": {
+    "description": "Etiqueta para la selección de PWC"
+  },
+  "pwcRequired": "Por favor seleccione un PWC",
+  "@pwcRequired": {
+    "description": "Mensaje de error cuando no se selecciona un PWC"
+  },
+  "noPWCsFound": "No se Encontraron PWC",
+  "@noPWCsFound": {
+    "description": "Mensaje cuando el usuario no tiene PWC"
+  },
+  "addPWCFirst": "Necesita agregar un PWC a su cuenta antes de registrarse para un evento.",
+  "@addPWCFirst": {
+    "description": "Mensaje que solicita al usuario agregar PWC primero"
+  },
+  "classDivision": "Clase / División",
+  "@classDivision": {
+    "description": "Etiqueta para la selección de clase/división"
+  },
+  "selectClassDivision": "Seleccionar Clase / División",
+  "@selectClassDivision": {
+    "description": "Sugerencia para el menú desplegable de clase/división"
+  },
+  "classDivisionHelper": "Elija la clase de carrera en la que competirá",
+  "@classDivisionHelper": {
+    "description": "Texto de ayuda para la selección de clase/división"
+  },
+  "classDivisionRequired": "La clase/división es requerida",
+  "@classDivisionRequired": {
+    "description": "Error de validación para clase/división"
+  },
+  "selectedPWC": "PWC Seleccionado",
+  "@selectedPWC": {
+    "description": "Etiqueta para el resumen del PWC seleccionado"
+  },
+  "transponderId": "ID del Transpondedor",
+  "@transponderId": {
+    "description": "Etiqueta para el campo de ID del transpondedor"
+  },
+  "transponderIdHint": "Ingrese su ID de transpondedor (opcional)",
+  "@transponderIdHint": {
+    "description": "Sugerencia para el campo de ID del transpondedor"
+  },
+  "proceedingToWaiver": "Procediendo a la renuncia...",
+  "@proceedingToWaiver": {
+    "description": "Mensaje al navegar a la renuncia"
+  },
+  "paymentStep": "Pago",
+  "@paymentStep": {
+    "description": "Título para el paso de pago"
+  },
+  "paymentStepDescription": "La integración de pago estará disponible pronto.",
+  "@paymentStepDescription": {
+    "description": "Descripción para el marcador de posición del paso de pago"
+  },
+  "continueToWaiver": "Continuar a la Renuncia",
+  "@continueToWaiver": {
+    "description": "Texto del botón para proceder a la renuncia"
+  },
+  "completePayment": "Completar Pago",
+  "@completePayment": {
+    "description": "Texto del botón para completar el pago"
+  },
+  "paymentNotYetImplemented": "Integración de pago próximamente",
+  "@paymentNotYetImplemented": {
+    "description": "Mensaje cuando el pago aún no está implementado"
+  },
+  "unknownError": "Ocurrió un error desconocido",
+  "@unknownError": {
+    "description": "Mensaje de error genérico"
+  },
+  "networkError": "Error de conexión de red. Por favor verifique su conexión a internet.",
+  "@networkError": {
+    "description": "Mensaje de error de red"
+  },
+  "timeoutError": "La solicitud expiró. Por favor intente de nuevo.",
+  "@timeoutError": {
+    "description": "Mensaje de error de tiempo de espera"
+  },
+  "serverError": "Error del servidor. Por favor intente más tarde.",
+  "@serverError": {
+    "description": "Mensaje de error del servidor"
+  },
+  "unauthorizedError": "Error de autenticación. Por favor inicie sesión nuevamente.",
+  "@unauthorizedError": {
+    "description": "Mensaje de error no autorizado"
+  },
+  "notFoundError": "Recurso no encontrado.",
+  "@notFoundError": {
+    "description": "Mensaje de error no encontrado"
+  },
+  "validationError": "Datos inválidos proporcionados. Por favor verifique su entrada.",
+  "@validationError": {
+    "description": "Mensaje de error de validación"
+  },
+  "rateLimitError": "Demasiadas solicitudes. Por favor espere un momento e intente de nuevo.",
+  "@rateLimitError": {
+    "description": "Mensaje de error de límite de velocidad"
+  },
+  "ok": "Aceptar",
+  "@ok": {
+    "description": "Texto del botón Aceptar"
+  },
+  "signOut": "Cerrar Sesión",
+  "@signOut": {
+    "description": "Texto del botón cerrar sesión"
+  },
+  "signOutConfirmation": "¿Está seguro de que desea cerrar sesión?",
+  "@signOutConfirmation": {
+    "description": "Mensaje de confirmación de cierre de sesión"
+  },
+  "importantInformation": "Información Importante",
+  "@importantInformation": {
+    "description": "Título para la sección de información importante"
+  },
+  "readWaiverCarefully": "Lea la renuncia completa cuidadosamente antes de firmar",
+  "@readWaiverCarefully": {
+    "description": "Mensaje sobre leer la renuncia cuidadosamente"
+  },
+  "languageToggleHint": "Puede cambiar el idioma usando el interruptor en la barra de la aplicación",
+  "@languageToggleHint": {
+    "description": "Sugerencia sobre el interruptor de idioma"
+  },
+  "downloadPdfComingSoon": "Descarga de PDF próximamente",
+  "@downloadPdfComingSoon": {
+    "description": "Mensaje cuando la descarga de PDF aún no está disponible"
+  },
+  "viewRegistrationComingSoon": "Detalles de registro próximamente",
+  "@viewRegistrationComingSoon": {
+    "description": "Mensaje cuando la vista de detalles de registro aún no está disponible"
+  },
+  "racer": "Corredor",
+  "@racer": {
+    "description": "Etiqueta para corredor"
+  },
+  "addClassEntry": "Agregar otra clase",
+  "removeClassEntry": "Quitar",
+  "purchaseIhraMembershipWithRegistration": "Comprar membresía IHRA con el registro",
+  "validIhraMembershipDescription": "La membresía IHRA válida requiere número de membresía y compra dentro del año en curso. Agregue la compra de membresía a su registro si es necesario.",
+  "spectatorDayPasses": "Pases de día adicionales (entradas de espectador)",
+  "spectatorDayPassesDescription": "Compre pases de día adicionales para espectadores antes de pagar.",
+  "dayPassesQuantity": "Cantidad de pases de día",
+  "spectatorSingleDayPass": "Pase de un día ($30)",
+  "spectatorWeekendPass": "Pase de fin de semana ($40)",
+  "classesAndPwc": "Clases y PWC",
+  "checkout": "Pago",
+  "orderSummary": "Resumen del Pedido",
+  "total": "Total",
+  "payWithPayPal": "Pagar con PayPal",
+  "afterPayPalReturn": "Después de completar el pago en el navegador, vuelva a esta aplicación y toque abajo.",
+  "iveCompletedPayment": "He completado el pago"
 }

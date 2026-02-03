@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// **'Continue as'**
   String get continueAs;
 
-  /// No description provided for @racer.
+  /// Label for racer
   ///
   /// In en, this message translates to:
   /// **'Racer'**
@@ -371,6 +371,12 @@ abstract class AppLocalizations {
   /// **'Membership Details'**
   String get membershipDetails;
 
+  /// No description provided for @ihraMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'IHRA Membership'**
+  String get ihraMembership;
+
   /// No description provided for @organization.
   ///
   /// In en, this message translates to:
@@ -388,6 +394,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Membership Number (Optional)'**
   String get membershipNumberOptional;
+
+  /// No description provided for @ihraMembershipNumberOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'IHRA Membership # (Optional)'**
+  String get ihraMembershipNumberOptional;
+
+  /// No description provided for @ihraMembershipPurchasedAtOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'IHRA Membership Purchased At (Optional)'**
+  String get ihraMembershipPurchasedAtOptional;
 
   /// No description provided for @classCategory.
   ///
@@ -424,6 +442,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get edit;
+
+  /// No description provided for @editName.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Name'**
+  String get editName;
+
+  /// No description provided for @editPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Phone'**
+  String get editPhone;
+
+  /// No description provided for @profileImageUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile image updated'**
+  String get profileImageUpdated;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated'**
+  String get profileUpdated;
+
+  /// No description provided for @bio.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get bio;
+
+  /// No description provided for @bioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about yourself...'**
+  String get bioHint;
+
+  /// No description provided for @editBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Bio'**
+  String get editBio;
+
+  /// No description provided for @sponsors.
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsors'**
+  String get sponsors;
+
+  /// No description provided for @sponsorsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'List your sponsors (one per line)'**
+  String get sponsorsHint;
+
+  /// No description provided for @editSponsors.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Sponsors'**
+  String get editSponsors;
+
+  /// No description provided for @banner.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner'**
+  String get banner;
+
+  /// No description provided for @editBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Banner'**
+  String get editBanner;
+
+  /// No description provided for @removeBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Banner'**
+  String get removeBanner;
+
+  /// No description provided for @bannerImageUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner image updated'**
+  String get bannerImageUpdated;
 
   /// No description provided for @events.
   ///
@@ -472,6 +574,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Closed'**
   String get closed;
+
+  /// No description provided for @register.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get register;
 
   /// No description provided for @viewDetails.
   ///
@@ -551,10 +659,10 @@ abstract class AppLocalizations {
   /// **'Heat Preferences'**
   String get heatPreferences;
 
-  /// No description provided for @transponderId.
+  /// Label for transponder ID field
   ///
   /// In en, this message translates to:
-  /// **'Transponder / ID Number'**
+  /// **'Transponder ID'**
   String get transponderId;
 
   /// No description provided for @reviewConfirm.
@@ -682,6 +790,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Event Dashboard'**
   String get racerDashboard;
+
+  /// No description provided for @backToEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Events'**
+  String get backToEvents;
 
   /// No description provided for @classVehicleSummary.
   ///
@@ -1156,6 +1270,696 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'hydrodragsfl@gmail.com'**
   String get contactEmailAddress;
+
+  /// Option to choose image from gallery
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from Gallery'**
+  String get chooseFromGallery;
+
+  /// Option to take a photo with camera
+  ///
+  /// In en, this message translates to:
+  /// **'Take a Photo'**
+  String get takeAPhoto;
+
+  /// Option to remove selected photo
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Photo'**
+  String get removePhoto;
+
+  /// Button to change profile photo
+  ///
+  /// In en, this message translates to:
+  /// **'Change Photo'**
+  String get changePhoto;
+
+  /// Button to add profile photo
+  ///
+  /// In en, this message translates to:
+  /// **'Add Photo'**
+  String get addPhoto;
+
+  /// Placeholder text for date picker
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get selectDate;
+
+  /// Male gender option
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get male;
+
+  /// Female gender option
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get female;
+
+  /// Phone number input hint/placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'(555) 123-4567'**
+  String get phoneHint;
+
+  /// Button text to complete profile
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get complete;
+
+  /// Error message when image picker fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error picking image: {error}'**
+  String errorPickingImage(String error);
+
+  /// Pro Stock class category
+  ///
+  /// In en, this message translates to:
+  /// **'Pro Stock'**
+  String get proStock;
+
+  /// Pro Mod class category
+  ///
+  /// In en, this message translates to:
+  /// **'Pro Mod'**
+  String get proMod;
+
+  /// Top Alcohol class category
+  ///
+  /// In en, this message translates to:
+  /// **'Top Alcohol'**
+  String get topAlcohol;
+
+  /// Competition Eliminator class category
+  ///
+  /// In en, this message translates to:
+  /// **'Competition Eliminator'**
+  String get competitionEliminator;
+
+  /// Super Comp class category
+  ///
+  /// In en, this message translates to:
+  /// **'Super Comp'**
+  String get superComp;
+
+  /// Error message when profile submission fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error submitting profile: {error}'**
+  String errorSubmittingProfile(String error);
+
+  /// Loading message when submitting profile
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting profile...'**
+  String get submittingProfile;
+
+  /// Hint text for street address field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your street address'**
+  String get streetHint;
+
+  /// Hint text for zip/postal code field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter zip code first for better results'**
+  String get zipHint;
+
+  /// Title for PWC management screen
+  ///
+  /// In en, this message translates to:
+  /// **'PWC Management'**
+  String get pwcManagement;
+
+  /// Button to add a new PWC
+  ///
+  /// In en, this message translates to:
+  /// **'Add PWC'**
+  String get addPWC;
+
+  /// No description provided for @pwcName.
+  ///
+  /// In en, this message translates to:
+  /// **'PWC Name'**
+  String get pwcName;
+
+  /// No description provided for @pwcNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name for your PWC'**
+  String get pwcNameHint;
+
+  /// Title for editing a PWC
+  ///
+  /// In en, this message translates to:
+  /// **'Edit PWC'**
+  String get editPWC;
+
+  /// Message when user has no PWCs
+  ///
+  /// In en, this message translates to:
+  /// **'No PWCs have been registered yet'**
+  String get noPWCs;
+
+  /// Message encouraging user to add their first PWC
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first personal watercraft to get started'**
+  String get addPWCToGetStarted;
+
+  /// Label for primary PWC
+  ///
+  /// In en, this message translates to:
+  /// **'Primary'**
+  String get primary;
+
+  /// Action to set a PWC as primary
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Primary'**
+  String get setAsPrimary;
+
+  /// Title for delete PWC confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete PWC'**
+  String get deletePWC;
+
+  /// Confirmation message for deleting a PWC
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this PWC? This action cannot be undone.'**
+  String get deletePWCConfirmation;
+
+  /// Delete button text
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Success message after deleting a PWC
+  ///
+  /// In en, this message translates to:
+  /// **'PWC deleted successfully'**
+  String get pwcDeleted;
+
+  /// Error message when deleting PWC fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting PWC'**
+  String get errorDeletingPWC;
+
+  /// Error message when saving PWC fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving PWC'**
+  String get errorSavingPWC;
+
+  /// Generic error label
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// Retry button text
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// Title for server unavailable screen
+  ///
+  /// In en, this message translates to:
+  /// **'Server Unavailable'**
+  String get serverUnavailableTitle;
+
+  /// Message shown when server is unreachable
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to the server. Please check your connection and try again.'**
+  String get serverUnavailableMessage;
+
+  /// Button to retry connecting to server
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Connection'**
+  String get retryConnection;
+
+  /// Button to continue without server (e.g. logout)
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Offline'**
+  String get continueOffline;
+
+  /// Placeholder for make dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Select Make'**
+  String get selectMake;
+
+  /// Hint for make text field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Make'**
+  String get enterMake;
+
+  /// Validation error for required make field
+  ///
+  /// In en, this message translates to:
+  /// **'Make is required'**
+  String get makeRequired;
+
+  /// Hint for model text field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Model'**
+  String get enterModel;
+
+  /// Validation error for required model field
+  ///
+  /// In en, this message translates to:
+  /// **'Model is required'**
+  String get modelRequired;
+
+  /// Year label
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get year;
+
+  /// Hint for year field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Year'**
+  String get enterYear;
+
+  /// Validation error for invalid year
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid year'**
+  String get invalidYear;
+
+  /// Placeholder for engine class dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Select Engine Class'**
+  String get selectEngineClass;
+
+  /// Engine size label
+  ///
+  /// In en, this message translates to:
+  /// **'Engine Size'**
+  String get engineSize;
+
+  /// Hint for engine size field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Engine Size (e.g., 1100cc)'**
+  String get enterEngineSize;
+
+  /// Color label
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get color;
+
+  /// Hint for color field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Color'**
+  String get enterColor;
+
+  /// Registration number label
+  ///
+  /// In en, this message translates to:
+  /// **'Registration Number'**
+  String get registrationNumber;
+
+  /// Hint for registration number field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Registration Number'**
+  String get enterRegistrationNumber;
+
+  /// Serial number label
+  ///
+  /// In en, this message translates to:
+  /// **'Serial Number'**
+  String get serialNumber;
+
+  /// Hint for serial number field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Serial Number'**
+  String get enterSerialNumber;
+
+  /// Notes label
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get notes;
+
+  /// Hint for notes field
+  ///
+  /// In en, this message translates to:
+  /// **'Additional notes or custom modifications'**
+  String get additionalNotes;
+
+  /// Checkbox label for setting PWC as primary
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Primary PWC'**
+  String get setAsPrimaryPWC;
+
+  /// Description for primary PWC checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'This will be your default PWC for race registrations'**
+  String get primaryPWCDescription;
+
+  /// Text showing additional items count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more'**
+  String andMore(int count);
+
+  /// Title for registered racers section
+  ///
+  /// In en, this message translates to:
+  /// **'Registered Racers'**
+  String get registeredRacers;
+
+  /// Message when no racers have registered for an event
+  ///
+  /// In en, this message translates to:
+  /// **'No racers registered yet.'**
+  String get noRacersRegistered;
+
+  /// Title for registration step 1
+  ///
+  /// In en, this message translates to:
+  /// **'Select Class & PWC'**
+  String get selectClassAndPWC;
+
+  /// Description for class and PWC selection
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your racing class and the PWC you\'ll be racing with.'**
+  String get selectClassAndPWCDescription;
+
+  /// Label for PWC selection
+  ///
+  /// In en, this message translates to:
+  /// **'Select Personal Watercraft'**
+  String get selectPWC;
+
+  /// Error message when PWC is not selected
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a PWC'**
+  String get pwcRequired;
+
+  /// Message when user has no PWCs
+  ///
+  /// In en, this message translates to:
+  /// **'No PWCs Found'**
+  String get noPWCsFound;
+
+  /// Message prompting user to add PWC first
+  ///
+  /// In en, this message translates to:
+  /// **'You need to add a PWC to your account before registering for an event.'**
+  String get addPWCFirst;
+
+  /// Label for class/division selection
+  ///
+  /// In en, this message translates to:
+  /// **'Class / Division'**
+  String get classDivision;
+
+  /// Hint for class division dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Select Class / Division'**
+  String get selectClassDivision;
+
+  /// Helper text for class division selection
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the racing class you\'ll compete in'**
+  String get classDivisionHelper;
+
+  /// Validation error for class division
+  ///
+  /// In en, this message translates to:
+  /// **'Class/Division is required'**
+  String get classDivisionRequired;
+
+  /// Label for selected PWC summary
+  ///
+  /// In en, this message translates to:
+  /// **'Selected PWC'**
+  String get selectedPWC;
+
+  /// Hint for transponder ID field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your transponder ID (optional)'**
+  String get transponderIdHint;
+
+  /// Message when navigating to waiver
+  ///
+  /// In en, this message translates to:
+  /// **'Proceeding to waiver...'**
+  String get proceedingToWaiver;
+
+  /// Title for payment step
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get paymentStep;
+
+  /// Description for payment step placeholder
+  ///
+  /// In en, this message translates to:
+  /// **'Payment integration will be available soon.'**
+  String get paymentStepDescription;
+
+  /// Button text to proceed to waiver
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to Waiver'**
+  String get continueToWaiver;
+
+  /// Button text to complete payment
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Payment'**
+  String get completePayment;
+
+  /// Message when payment is not yet implemented
+  ///
+  /// In en, this message translates to:
+  /// **'Payment integration coming soon'**
+  String get paymentNotYetImplemented;
+
+  /// Generic error message
+  ///
+  /// In en, this message translates to:
+  /// **'An unknown error occurred'**
+  String get unknownError;
+
+  /// Network error message
+  ///
+  /// In en, this message translates to:
+  /// **'Network connection error. Please check your internet connection.'**
+  String get networkError;
+
+  /// Timeout error message
+  ///
+  /// In en, this message translates to:
+  /// **'Request timed out. Please try again.'**
+  String get timeoutError;
+
+  /// Server error message
+  ///
+  /// In en, this message translates to:
+  /// **'Server error. Please try again later.'**
+  String get serverError;
+
+  /// Unauthorized error message
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Please log in again.'**
+  String get unauthorizedError;
+
+  /// Not found error message
+  ///
+  /// In en, this message translates to:
+  /// **'Resource not found.'**
+  String get notFoundError;
+
+  /// Validation error message
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid data provided. Please check your input.'**
+  String get validationError;
+
+  /// Rate limit error message
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests. Please wait a moment and try again.'**
+  String get rateLimitError;
+
+  /// OK button text
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// Sign out button text
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOut;
+
+  /// Sign out confirmation message
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out?'**
+  String get signOutConfirmation;
+
+  /// Title for important information section
+  ///
+  /// In en, this message translates to:
+  /// **'Important Information'**
+  String get importantInformation;
+
+  /// Message about reading waiver carefully
+  ///
+  /// In en, this message translates to:
+  /// **'Read the full waiver carefully before signing'**
+  String get readWaiverCarefully;
+
+  /// Hint about language toggle
+  ///
+  /// In en, this message translates to:
+  /// **'You can change the language using the toggle in the app bar'**
+  String get languageToggleHint;
+
+  /// Message when PDF download is not yet available
+  ///
+  /// In en, this message translates to:
+  /// **'PDF download coming soon'**
+  String get downloadPdfComingSoon;
+
+  /// Message when registration details view is not yet available
+  ///
+  /// In en, this message translates to:
+  /// **'Registration details coming soon'**
+  String get viewRegistrationComingSoon;
+
+  /// No description provided for @addClassEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another class'**
+  String get addClassEntry;
+
+  /// No description provided for @removeClassEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeClassEntry;
+
+  /// No description provided for @purchaseIhraMembershipWithRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase IHRA membership with registration'**
+  String get purchaseIhraMembershipWithRegistration;
+
+  /// No description provided for @validIhraMembershipDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid IHRA membership requires a membership number and purchase within this calendar year. Add membership purchase to your registration if needed.'**
+  String get validIhraMembershipDescription;
+
+  /// No description provided for @spectatorDayPasses.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional day passes (spectator tickets)'**
+  String get spectatorDayPasses;
+
+  /// No description provided for @spectatorDayPassesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase additional day passes for spectators before checkout.'**
+  String get spectatorDayPassesDescription;
+
+  /// No description provided for @dayPassesQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of day passes'**
+  String get dayPassesQuantity;
+
+  /// No description provided for @spectatorSingleDayPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Single day pass (\$30)'**
+  String get spectatorSingleDayPass;
+
+  /// No description provided for @spectatorWeekendPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekend pass (\$40)'**
+  String get spectatorWeekendPass;
+
+  /// No description provided for @classesAndPwc.
+  ///
+  /// In en, this message translates to:
+  /// **'Classes & PWC'**
+  String get classesAndPwc;
+
+  /// No description provided for @checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Checkout'**
+  String get checkout;
+
+  /// No description provided for @orderSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Summary'**
+  String get orderSummary;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @payWithPayPal.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with PayPal'**
+  String get payWithPayPal;
+
+  /// No description provided for @afterPayPalReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'After completing payment in the browser, return to this app and tap below.'**
+  String get afterPayPalReturn;
+
+  /// No description provided for @iveCompletedPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve completed payment'**
+  String get iveCompletedPayment;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

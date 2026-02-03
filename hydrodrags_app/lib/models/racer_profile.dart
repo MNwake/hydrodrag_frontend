@@ -1,10 +1,13 @@
 class RacerProfile {
+  String? id;
+
   // Step 1 - Personal Info
   String? firstName;
   String? lastName;
   DateTime? dateOfBirth;
   String? gender;
   String? nationality;
+  String? profileImagePath; // Path to profile image file
 
   // Step 2 - Contact Info
   String? phoneNumber;
@@ -22,14 +25,29 @@ class RacerProfile {
   // Step 4 - Membership Details
   String? organization;
   String? membershipNumber;
+  DateTime? membershipPurchasedAt;
   String? classCategory;
 
+  // Additional Profile Info
+  String? bio;
+  List<String>? sponsors;
+  String? bannerImagePath; // Path to banner image file
+  DateTime? profileImageUpdatedAt; // Timestamp when profile image was last updated
+  DateTime? bannerImageUpdatedAt; // Timestamp when banner image was last updated
+
+  /// From backend: racer has a signed waiver that is still valid (e.g. within 365 days).
+  bool? hasValidWaiver;
+  /// When the waiver was signed (from backend waiver_signed_at).
+  DateTime? waiverSignedAt;
+
   RacerProfile({
+    this.id,
     this.firstName,
     this.lastName,
     this.dateOfBirth,
     this.gender,
     this.nationality,
+    this.profileImagePath,
     this.phoneNumber,
     this.email,
     this.emergencyContactName,
@@ -41,7 +59,15 @@ class RacerProfile {
     this.zipPostalCode,
     this.organization,
     this.membershipNumber,
+    this.membershipPurchasedAt,
     this.classCategory,
+    this.bio,
+    this.sponsors,
+    this.bannerImagePath,
+    this.profileImageUpdatedAt,
+    this.bannerImageUpdatedAt,
+    this.hasValidWaiver,
+    this.waiverSignedAt,
   });
 
   bool get isStep1Complete =>
@@ -73,8 +99,7 @@ class RacerProfile {
       zipPostalCode != null &&
       zipPostalCode!.isNotEmpty;
 
-  bool get isStep4Complete =>
-      classCategory != null && classCategory!.isNotEmpty;
+  bool get isStep4Complete => true; // IHRA Membership # is optional
 
   bool get isComplete =>
       isStep1Complete && isStep2Complete && isStep3Complete && isStep4Complete;

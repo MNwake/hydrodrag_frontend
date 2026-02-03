@@ -147,6 +147,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get membershipDetails => 'Detalles de Membresía';
 
   @override
+  String get ihraMembership => 'Membresía IHRA';
+
+  @override
   String get organization => 'Organización / Asociación';
 
   @override
@@ -154,6 +157,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get membershipNumberOptional => 'Número de Membresía (Opcional)';
+
+  @override
+  String get ihraMembershipNumberOptional => 'Número de Membresía IHRA # (Opcional)';
+
+  @override
+  String get ihraMembershipPurchasedAtOptional => 'Fecha de compra de membresía IHRA (Opcional)';
 
   @override
   String get classCategory => 'Clase / Categoría';
@@ -172,6 +181,48 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get edit => 'Editar';
+
+  @override
+  String get editName => 'Editar Nombre';
+
+  @override
+  String get editPhone => 'Editar Teléfono';
+
+  @override
+  String get profileImageUpdated => 'Imagen de perfil actualizada';
+
+  @override
+  String get profileUpdated => 'Perfil actualizado';
+
+  @override
+  String get bio => 'Biografía';
+
+  @override
+  String get bioHint => 'Cuéntanos sobre ti...';
+
+  @override
+  String get editBio => 'Editar Biografía';
+
+  @override
+  String get sponsors => 'Patrocinadores';
+
+  @override
+  String get sponsorsHint => 'Lista tus patrocinadores (uno por línea)';
+
+  @override
+  String get editSponsors => 'Editar Patrocinadores';
+
+  @override
+  String get banner => 'Banner';
+
+  @override
+  String get editBanner => 'Editar Banner';
+
+  @override
+  String get removeBanner => 'Eliminar Banner';
+
+  @override
+  String get bannerImageUpdated => 'Imagen de banner actualizada';
 
   @override
   String get events => 'Eventos';
@@ -196,6 +247,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get closed => 'Cerrado';
+
+  @override
+  String get register => 'Registrarse';
 
   @override
   String get viewDetails => 'Ver Detalles';
@@ -237,7 +291,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get heatPreferences => 'Preferencias de Serie';
 
   @override
-  String get transponderId => 'Transpondedor / Número de ID';
+  String get transponderId => 'ID del Transpondedor';
 
   @override
   String get reviewConfirm => 'Revisar y Confirmar';
@@ -301,6 +355,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get racerDashboard => 'Mi Panel de Eventos';
+
+  @override
+  String get backToEvents => 'Volver a Eventos';
 
   @override
   String get classVehicleSummary => 'Resumen de Clase y Vehículo';
@@ -538,4 +595,355 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get contactEmailAddress => 'hydrodragsfl@gmail.com';
+
+  @override
+  String get chooseFromGallery => 'Elegir de la Galería';
+
+  @override
+  String get takeAPhoto => 'Tomar una Foto';
+
+  @override
+  String get removePhoto => 'Eliminar Foto';
+
+  @override
+  String get changePhoto => 'Cambiar Foto';
+
+  @override
+  String get addPhoto => 'Agregar Foto';
+
+  @override
+  String get selectDate => 'Seleccionar fecha';
+
+  @override
+  String get male => 'Masculino';
+
+  @override
+  String get female => 'Femenino';
+
+  @override
+  String get phoneHint => '(555) 123-4567';
+
+  @override
+  String get complete => 'Completar';
+
+  @override
+  String errorPickingImage(String error) {
+    return 'Error al seleccionar imagen: $error';
+  }
+
+  @override
+  String get proStock => 'Pro Stock';
+
+  @override
+  String get proMod => 'Pro Mod';
+
+  @override
+  String get topAlcohol => 'Top Alcohol';
+
+  @override
+  String get competitionEliminator => 'Competition Eliminator';
+
+  @override
+  String get superComp => 'Super Comp';
+
+  @override
+  String errorSubmittingProfile(String error) {
+    return 'Error al enviar perfil: $error';
+  }
+
+  @override
+  String get submittingProfile => 'Enviando perfil...';
+
+  @override
+  String get streetHint => 'Ingrese su dirección';
+
+  @override
+  String get zipHint => 'Ingrese el código postal primero para mejores resultados';
+
+  @override
+  String get pwcManagement => 'Gestión de PWC';
+
+  @override
+  String get addPWC => 'Agregar PWC';
+
+  @override
+  String get pwcName => 'Nombre del PWC';
+
+  @override
+  String get pwcNameHint => 'Ingrese un nombre para su PWC';
+
+  @override
+  String get editPWC => 'Editar PWC';
+
+  @override
+  String get noPWCs => 'No hay PWC registrados aún';
+
+  @override
+  String get addPWCToGetStarted => 'Agregue su primera embarcación personal para comenzar';
+
+  @override
+  String get primary => 'Principal';
+
+  @override
+  String get setAsPrimary => 'Establecer como Principal';
+
+  @override
+  String get deletePWC => 'Eliminar PWC';
+
+  @override
+  String get deletePWCConfirmation => '¿Está seguro de que desea eliminar este PWC? Esta acción no se puede deshacer.';
+
+  @override
+  String get delete => 'Eliminar';
+
+  @override
+  String get pwcDeleted => 'PWC eliminado exitosamente';
+
+  @override
+  String get errorDeletingPWC => 'Error al eliminar PWC';
+
+  @override
+  String get errorSavingPWC => 'Error al guardar PWC';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get retry => 'Reintentar';
+
+  @override
+  String get serverUnavailableTitle => 'Servidor no disponible';
+
+  @override
+  String get serverUnavailableMessage => 'No se puede conectar al servidor. Por favor verifique su conexión e intente de nuevo.';
+
+  @override
+  String get retryConnection => 'Reintentar conexión';
+
+  @override
+  String get continueOffline => 'Continuar sin conexión';
+
+  @override
+  String get selectMake => 'Seleccionar Marca';
+
+  @override
+  String get enterMake => 'Ingresar Marca';
+
+  @override
+  String get makeRequired => 'La marca es requerida';
+
+  @override
+  String get enterModel => 'Ingresar Modelo';
+
+  @override
+  String get modelRequired => 'El modelo es requerido';
+
+  @override
+  String get year => 'Año';
+
+  @override
+  String get enterYear => 'Ingresar Año';
+
+  @override
+  String get invalidYear => 'Por favor ingrese un año válido';
+
+  @override
+  String get selectEngineClass => 'Seleccionar Clase de Motor';
+
+  @override
+  String get engineSize => 'Tamaño del Motor';
+
+  @override
+  String get enterEngineSize => 'Ingresar Tamaño del Motor (ej., 1100cc)';
+
+  @override
+  String get color => 'Color';
+
+  @override
+  String get enterColor => 'Ingresar Color';
+
+  @override
+  String get registrationNumber => 'Número de Registro';
+
+  @override
+  String get enterRegistrationNumber => 'Ingresar Número de Registro';
+
+  @override
+  String get serialNumber => 'Número de Serie';
+
+  @override
+  String get enterSerialNumber => 'Ingresar Número de Serie';
+
+  @override
+  String get notes => 'Notas';
+
+  @override
+  String get additionalNotes => 'Notas adicionales o modificaciones personalizadas';
+
+  @override
+  String get setAsPrimaryPWC => 'Establecer como PWC Principal';
+
+  @override
+  String get primaryPWCDescription => 'Este será su PWC predeterminado para registros de carreras';
+
+  @override
+  String andMore(int count) {
+    return '$count más';
+  }
+
+  @override
+  String get registeredRacers => 'Corredores Registrados';
+
+  @override
+  String get noRacersRegistered => 'Aún no hay corredores registrados.';
+
+  @override
+  String get selectClassAndPWC => 'Seleccionar Clase y PWC';
+
+  @override
+  String get selectClassAndPWCDescription => 'Elija su clase de carrera y el PWC con el que competirá.';
+
+  @override
+  String get selectPWC => 'Seleccionar Embarcación Personal';
+
+  @override
+  String get pwcRequired => 'Por favor seleccione un PWC';
+
+  @override
+  String get noPWCsFound => 'No se Encontraron PWC';
+
+  @override
+  String get addPWCFirst => 'Necesita agregar un PWC a su cuenta antes de registrarse para un evento.';
+
+  @override
+  String get classDivision => 'Clase / División';
+
+  @override
+  String get selectClassDivision => 'Seleccionar Clase / División';
+
+  @override
+  String get classDivisionHelper => 'Elija la clase de carrera en la que competirá';
+
+  @override
+  String get classDivisionRequired => 'La clase/división es requerida';
+
+  @override
+  String get selectedPWC => 'PWC Seleccionado';
+
+  @override
+  String get transponderIdHint => 'Ingrese su ID de transpondedor (opcional)';
+
+  @override
+  String get proceedingToWaiver => 'Procediendo a la renuncia...';
+
+  @override
+  String get paymentStep => 'Pago';
+
+  @override
+  String get paymentStepDescription => 'La integración de pago estará disponible pronto.';
+
+  @override
+  String get continueToWaiver => 'Continuar a la Renuncia';
+
+  @override
+  String get completePayment => 'Completar Pago';
+
+  @override
+  String get paymentNotYetImplemented => 'Integración de pago próximamente';
+
+  @override
+  String get unknownError => 'Ocurrió un error desconocido';
+
+  @override
+  String get networkError => 'Error de conexión de red. Por favor verifique su conexión a internet.';
+
+  @override
+  String get timeoutError => 'La solicitud expiró. Por favor intente de nuevo.';
+
+  @override
+  String get serverError => 'Error del servidor. Por favor intente más tarde.';
+
+  @override
+  String get unauthorizedError => 'Error de autenticación. Por favor inicie sesión nuevamente.';
+
+  @override
+  String get notFoundError => 'Recurso no encontrado.';
+
+  @override
+  String get validationError => 'Datos inválidos proporcionados. Por favor verifique su entrada.';
+
+  @override
+  String get rateLimitError => 'Demasiadas solicitudes. Por favor espere un momento e intente de nuevo.';
+
+  @override
+  String get ok => 'Aceptar';
+
+  @override
+  String get signOut => 'Cerrar Sesión';
+
+  @override
+  String get signOutConfirmation => '¿Está seguro de que desea cerrar sesión?';
+
+  @override
+  String get importantInformation => 'Información Importante';
+
+  @override
+  String get readWaiverCarefully => 'Lea la renuncia completa cuidadosamente antes de firmar';
+
+  @override
+  String get languageToggleHint => 'Puede cambiar el idioma usando el interruptor en la barra de la aplicación';
+
+  @override
+  String get downloadPdfComingSoon => 'Descarga de PDF próximamente';
+
+  @override
+  String get viewRegistrationComingSoon => 'Detalles de registro próximamente';
+
+  @override
+  String get addClassEntry => 'Agregar otra clase';
+
+  @override
+  String get removeClassEntry => 'Quitar';
+
+  @override
+  String get purchaseIhraMembershipWithRegistration => 'Comprar membresía IHRA con el registro';
+
+  @override
+  String get validIhraMembershipDescription => 'La membresía IHRA válida requiere número de membresía y compra dentro del año en curso. Agregue la compra de membresía a su registro si es necesario.';
+
+  @override
+  String get spectatorDayPasses => 'Pases de día adicionales (entradas de espectador)';
+
+  @override
+  String get spectatorDayPassesDescription => 'Compre pases de día adicionales para espectadores antes de pagar.';
+
+  @override
+  String get dayPassesQuantity => 'Cantidad de pases de día';
+
+  @override
+  String get spectatorSingleDayPass => 'Pase de un día (\$30)';
+
+  @override
+  String get spectatorWeekendPass => 'Pase de fin de semana (\$40)';
+
+  @override
+  String get classesAndPwc => 'Clases y PWC';
+
+  @override
+  String get checkout => 'Pago';
+
+  @override
+  String get orderSummary => 'Resumen del Pedido';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get payWithPayPal => 'Pagar con PayPal';
+
+  @override
+  String get afterPayPalReturn => 'Después de completar el pago en el navegador, vuelva a esta aplicación y toque abajo.';
+
+  @override
+  String get iveCompletedPayment => 'He completado el pago';
 }

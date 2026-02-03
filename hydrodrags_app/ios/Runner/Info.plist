@@ -45,5 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to take a profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to select a profile photo.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Add events to your calendar so you don't miss races.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Used when adding events to your calendar.</string>
 </dict>
 </plist>

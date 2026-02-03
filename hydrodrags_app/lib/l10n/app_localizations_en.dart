@@ -147,6 +147,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get membershipDetails => 'Membership Details';
 
   @override
+  String get ihraMembership => 'IHRA Membership';
+
+  @override
   String get organization => 'Organization / Association';
 
   @override
@@ -154,6 +157,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get membershipNumberOptional => 'Membership Number (Optional)';
+
+  @override
+  String get ihraMembershipNumberOptional => 'IHRA Membership # (Optional)';
+
+  @override
+  String get ihraMembershipPurchasedAtOptional => 'IHRA Membership Purchased At (Optional)';
 
   @override
   String get classCategory => 'Class / Category';
@@ -172,6 +181,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get edit => 'Edit';
+
+  @override
+  String get editName => 'Edit Name';
+
+  @override
+  String get editPhone => 'Edit Phone';
+
+  @override
+  String get profileImageUpdated => 'Profile image updated';
+
+  @override
+  String get profileUpdated => 'Profile updated';
+
+  @override
+  String get bio => 'Bio';
+
+  @override
+  String get bioHint => 'Tell us about yourself...';
+
+  @override
+  String get editBio => 'Edit Bio';
+
+  @override
+  String get sponsors => 'Sponsors';
+
+  @override
+  String get sponsorsHint => 'List your sponsors (one per line)';
+
+  @override
+  String get editSponsors => 'Edit Sponsors';
+
+  @override
+  String get banner => 'Banner';
+
+  @override
+  String get editBanner => 'Edit Banner';
+
+  @override
+  String get removeBanner => 'Remove Banner';
+
+  @override
+  String get bannerImageUpdated => 'Banner image updated';
 
   @override
   String get events => 'Events';
@@ -196,6 +247,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get closed => 'Closed';
+
+  @override
+  String get register => 'Register';
 
   @override
   String get viewDetails => 'View Details';
@@ -237,7 +291,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get heatPreferences => 'Heat Preferences';
 
   @override
-  String get transponderId => 'Transponder / ID Number';
+  String get transponderId => 'Transponder ID';
 
   @override
   String get reviewConfirm => 'Review & Confirm';
@@ -301,6 +355,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get racerDashboard => 'My Event Dashboard';
+
+  @override
+  String get backToEvents => 'Back to Events';
 
   @override
   String get classVehicleSummary => 'Class & Vehicle Summary';
@@ -538,4 +595,355 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactEmailAddress => 'hydrodragsfl@gmail.com';
+
+  @override
+  String get chooseFromGallery => 'Choose from Gallery';
+
+  @override
+  String get takeAPhoto => 'Take a Photo';
+
+  @override
+  String get removePhoto => 'Remove Photo';
+
+  @override
+  String get changePhoto => 'Change Photo';
+
+  @override
+  String get addPhoto => 'Add Photo';
+
+  @override
+  String get selectDate => 'Select date';
+
+  @override
+  String get male => 'Male';
+
+  @override
+  String get female => 'Female';
+
+  @override
+  String get phoneHint => '(555) 123-4567';
+
+  @override
+  String get complete => 'Complete';
+
+  @override
+  String errorPickingImage(String error) {
+    return 'Error picking image: $error';
+  }
+
+  @override
+  String get proStock => 'Pro Stock';
+
+  @override
+  String get proMod => 'Pro Mod';
+
+  @override
+  String get topAlcohol => 'Top Alcohol';
+
+  @override
+  String get competitionEliminator => 'Competition Eliminator';
+
+  @override
+  String get superComp => 'Super Comp';
+
+  @override
+  String errorSubmittingProfile(String error) {
+    return 'Error submitting profile: $error';
+  }
+
+  @override
+  String get submittingProfile => 'Submitting profile...';
+
+  @override
+  String get streetHint => 'Enter your street address';
+
+  @override
+  String get zipHint => 'Enter zip code first for better results';
+
+  @override
+  String get pwcManagement => 'PWC Management';
+
+  @override
+  String get addPWC => 'Add PWC';
+
+  @override
+  String get pwcName => 'PWC Name';
+
+  @override
+  String get pwcNameHint => 'Enter a name for your PWC';
+
+  @override
+  String get editPWC => 'Edit PWC';
+
+  @override
+  String get noPWCs => 'No PWCs have been registered yet';
+
+  @override
+  String get addPWCToGetStarted => 'Add your first personal watercraft to get started';
+
+  @override
+  String get primary => 'Primary';
+
+  @override
+  String get setAsPrimary => 'Set as Primary';
+
+  @override
+  String get deletePWC => 'Delete PWC';
+
+  @override
+  String get deletePWCConfirmation => 'Are you sure you want to delete this PWC? This action cannot be undone.';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get pwcDeleted => 'PWC deleted successfully';
+
+  @override
+  String get errorDeletingPWC => 'Error deleting PWC';
+
+  @override
+  String get errorSavingPWC => 'Error saving PWC';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get serverUnavailableTitle => 'Server Unavailable';
+
+  @override
+  String get serverUnavailableMessage => 'Unable to connect to the server. Please check your connection and try again.';
+
+  @override
+  String get retryConnection => 'Retry Connection';
+
+  @override
+  String get continueOffline => 'Continue Offline';
+
+  @override
+  String get selectMake => 'Select Make';
+
+  @override
+  String get enterMake => 'Enter Make';
+
+  @override
+  String get makeRequired => 'Make is required';
+
+  @override
+  String get enterModel => 'Enter Model';
+
+  @override
+  String get modelRequired => 'Model is required';
+
+  @override
+  String get year => 'Year';
+
+  @override
+  String get enterYear => 'Enter Year';
+
+  @override
+  String get invalidYear => 'Please enter a valid year';
+
+  @override
+  String get selectEngineClass => 'Select Engine Class';
+
+  @override
+  String get engineSize => 'Engine Size';
+
+  @override
+  String get enterEngineSize => 'Enter Engine Size (e.g., 1100cc)';
+
+  @override
+  String get color => 'Color';
+
+  @override
+  String get enterColor => 'Enter Color';
+
+  @override
+  String get registrationNumber => 'Registration Number';
+
+  @override
+  String get enterRegistrationNumber => 'Enter Registration Number';
+
+  @override
+  String get serialNumber => 'Serial Number';
+
+  @override
+  String get enterSerialNumber => 'Enter Serial Number';
+
+  @override
+  String get notes => 'Notes';
+
+  @override
+  String get additionalNotes => 'Additional notes or custom modifications';
+
+  @override
+  String get setAsPrimaryPWC => 'Set as Primary PWC';
+
+  @override
+  String get primaryPWCDescription => 'This will be your default PWC for race registrations';
+
+  @override
+  String andMore(int count) {
+    return '$count more';
+  }
+
+  @override
+  String get registeredRacers => 'Registered Racers';
+
+  @override
+  String get noRacersRegistered => 'No racers registered yet.';
+
+  @override
+  String get selectClassAndPWC => 'Select Class & PWC';
+
+  @override
+  String get selectClassAndPWCDescription => 'Choose your racing class and the PWC you\'ll be racing with.';
+
+  @override
+  String get selectPWC => 'Select Personal Watercraft';
+
+  @override
+  String get pwcRequired => 'Please select a PWC';
+
+  @override
+  String get noPWCsFound => 'No PWCs Found';
+
+  @override
+  String get addPWCFirst => 'You need to add a PWC to your account before registering for an event.';
+
+  @override
+  String get classDivision => 'Class / Division';
+
+  @override
+  String get selectClassDivision => 'Select Class / Division';
+
+  @override
+  String get classDivisionHelper => 'Choose the racing class you\'ll compete in';
+
+  @override
+  String get classDivisionRequired => 'Class/Division is required';
+
+  @override
+  String get selectedPWC => 'Selected PWC';
+
+  @override
+  String get transponderIdHint => 'Enter your transponder ID (optional)';
+
+  @override
+  String get proceedingToWaiver => 'Proceeding to waiver...';
+
+  @override
+  String get paymentStep => 'Payment';
+
+  @override
+  String get paymentStepDescription => 'Payment integration will be available soon.';
+
+  @override
+  String get continueToWaiver => 'Continue to Waiver';
+
+  @override
+  String get completePayment => 'Complete Payment';
+
+  @override
+  String get paymentNotYetImplemented => 'Payment integration coming soon';
+
+  @override
+  String get unknownError => 'An unknown error occurred';
+
+  @override
+  String get networkError => 'Network connection error. Please check your internet connection.';
+
+  @override
+  String get timeoutError => 'Request timed out. Please try again.';
+
+  @override
+  String get serverError => 'Server error. Please try again later.';
+
+  @override
+  String get unauthorizedError => 'Authentication failed. Please log in again.';
+
+  @override
+  String get notFoundError => 'Resource not found.';
+
+  @override
+  String get validationError => 'Invalid data provided. Please check your input.';
+
+  @override
+  String get rateLimitError => 'Too many requests. Please wait a moment and try again.';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get signOut => 'Sign Out';
+
+  @override
+  String get signOutConfirmation => 'Are you sure you want to sign out?';
+
+  @override
+  String get importantInformation => 'Important Information';
+
+  @override
+  String get readWaiverCarefully => 'Read the full waiver carefully before signing';
+
+  @override
+  String get languageToggleHint => 'You can change the language using the toggle in the app bar';
+
+  @override
+  String get downloadPdfComingSoon => 'PDF download coming soon';
+
+  @override
+  String get viewRegistrationComingSoon => 'Registration details coming soon';
+
+  @override
+  String get addClassEntry => 'Add another class';
+
+  @override
+  String get removeClassEntry => 'Remove';
+
+  @override
+  String get purchaseIhraMembershipWithRegistration => 'Purchase IHRA membership with registration';
+
+  @override
+  String get validIhraMembershipDescription => 'Valid IHRA membership requires a membership number and purchase within this calendar year. Add membership purchase to your registration if needed.';
+
+  @override
+  String get spectatorDayPasses => 'Additional day passes (spectator tickets)';
+
+  @override
+  String get spectatorDayPassesDescription => 'Purchase additional day passes for spectators before checkout.';
+
+  @override
+  String get dayPassesQuantity => 'Number of day passes';
+
+  @override
+  String get spectatorSingleDayPass => 'Single day pass (\$30)';
+
+  @override
+  String get spectatorWeekendPass => 'Weekend pass (\$40)';
+
+  @override
+  String get classesAndPwc => 'Classes & PWC';
+
+  @override
+  String get checkout => 'Checkout';
+
+  @override
+  String get orderSummary => 'Order Summary';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get payWithPayPal => 'Pay with PayPal';
+
+  @override
+  String get afterPayPalReturn => 'After completing payment in the browser, return to this app and tap below.';
+
+  @override
+  String get iveCompletedPayment => 'I\'ve completed payment';
 }

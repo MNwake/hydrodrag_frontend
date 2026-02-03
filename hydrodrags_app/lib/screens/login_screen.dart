@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/language_toggle.dart';
 import '../services/auth_service.dart';
+import '../services/error_handler_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,18 +18,39 @@ class _LoginScreenState extends State<LoginScreen> {
   final _codeFormKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _codeFocusNode = FocusNode();
 
   @override
   void dispose() {
     _emailController.dispose();
     _codeController.dispose();
+    _emailFocusNode.dispose();
+    _codeFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _sendCode() async {
     if (_emailFormKey.currentState!.validate()) {
       final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.requestVerificationCode(_emailController.text.trim());
+      final email = _emailController.text.trim();
+      
+      // First, try to authenticate with existing tokens
+      final authenticated = await authService.tryAuthenticateWithExistingTokens(email);
+      
+      if (authenticated && mounted) {
+        // Successfully authenticated with existing tokens
+        // Navigate based on profile completion status
+        if (authService.profileComplete) {
+          Navigator.of(context).pushReplacementNamed('/main');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/racer-profile');
+        }
+        return;
+      }
+      
+      // No valid tokens, proceed with sending code
+      await authService.requestVerificationCode(email);
     }
   }
 
@@ -37,15 +59,28 @@ class _LoginScreenState extends State<LoginScreen> {
       final authService = Provider.of<AuthService>(context, listen: false);
       final success = await authService.verifyCode(_codeController.text.trim());
       if (success && mounted) {
-        // Navigate to main navigation screen
-        Navigator.of(context).pushReplacementNamed('/main');
+        // Navigate based on profile completion status
+        if (authService.profileComplete) {
+          // Profile is complete, go to main screen
+          Navigator.of(context).pushReplacementNamed('/main');
+        } else {
+          // Profile is not complete, go to profile screen
+          Navigator.of(context).pushReplacementNamed('/racer-profile');
+        }
       }
     }
   }
 
-  void _resendCode() {
+  Future<void> _resendCode() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final email = authService.email;
+    if (email == null || email.isEmpty) {
+      // No stored email (e.g. user navigated back and forth); go back to email step
+      _reset();
+      return;
+    }
     _codeController.clear();
-    _sendCode();
+    await authService.requestVerificationCode(email);
   }
 
   void _reset() {
@@ -73,9 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     key: status == AuthStatus.codeSent || status == AuthStatus.verifying
                         ? _codeFormKey
                         : _emailFormKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                    child: FocusTraversalGroup(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                         const SizedBox(height: 32),
                         
                         // Logo
@@ -193,8 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (status == AuthStatus.unauthenticated) ...[
                           TextFormField(
                             controller: _emailController,
+                            focusNode: _emailFocusNode,
                             keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.send,
+                            textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _sendCode(),
                             decoration: InputDecoration(
                               labelText: l10n.email,
@@ -235,6 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (status == AuthStatus.codeSent || status == AuthStatus.verifying) ...[
                           TextFormField(
                             controller: _codeController,
+                            focusNode: _codeFocusNode,
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.done,
                             maxLength: 6,
@@ -255,6 +293,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return l10n.invalidCode;
                               }
                               return null;
+                            },
+                            onChanged: (value) {
+                              if (value.length == 6 && mounted) {
+                                FocusScope.of(context).unfocus();
+                              }
                             },
                             onFieldSubmitted: (_) => _verifyCode(),
                           ),
@@ -341,6 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+                  ),
                   );
                 },
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/language_toggle.dart';
+import '../l10n/app_localizations.dart';
 
 class WaiverOverviewScreen extends StatelessWidget {
   const WaiverOverviewScreen({super.key});
@@ -7,10 +8,11 @@ class WaiverOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Liability Waiver'),
+        title: Text(l10n.waiver),
         actions: const [
           LanguageToggle(isCompact: true),
           SizedBox(width: 8),
@@ -30,13 +32,13 @@ class WaiverOverviewScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Liability Waiver',
+                l10n.waiver,
                 style: theme.textTheme.headlineLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               Text(
-                'This waiver must be reviewed and accepted before participation.',
+                l10n.waiverExplanation,
                 style: theme.textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
@@ -47,7 +49,7 @@ class WaiverOverviewScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Important Information',
+                        l10n.importantInformation ?? 'Important Information',
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 16),
@@ -57,7 +59,7 @@ class WaiverOverviewScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Read the full waiver carefully before signing',
+                              l10n.readWaiverCarefully ?? 'Read the full waiver carefully before signing',
                               style: theme.textTheme.bodyMedium,
                             ),
                           ),
@@ -70,7 +72,7 @@ class WaiverOverviewScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'You can change the language using the toggle in the app bar',
+                              l10n.languageToggleHint ?? 'You can change the language using the toggle in the app bar',
                               style: theme.textTheme.bodyMedium,
                             ),
                           ),
@@ -86,18 +88,23 @@ class WaiverOverviewScreen extends StatelessWidget {
                   Navigator.of(context).pushNamed('/waiver-reading');
                 },
                 icon: const Icon(Icons.visibility),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('View Waiver'),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(l10n.viewWaiver),
                 ),
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () {
-                  // TODO: Download PDF
+                  // TODO: Download PDF - will be implemented when backend provides PDF endpoint
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.downloadPdfComingSoon ?? 'PDF download coming soon'),
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.download),
-                label: const Text('Download PDF'),
+                label: Text(l10n.downloadPdf),
               ),
             ],
           ),

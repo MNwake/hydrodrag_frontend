@@ -9,11 +9,13 @@ class AppStateService extends ChangeNotifier {
   Event? _selectedEvent;
   EventRegistration? _eventRegistration;
   WaiverSignature? _waiverSignature;
+  List<String>? _waiverInitials;
 
   RacerProfile? get racerProfile => _racerProfile;
   Event? get selectedEvent => _selectedEvent;
   EventRegistration? get eventRegistration => _eventRegistration;
   WaiverSignature? get waiverSignature => _waiverSignature;
+  List<String>? get waiverInitials => _waiverInitials;
 
   void setRacerProfile(RacerProfile profile) {
     _racerProfile = profile;
@@ -26,6 +28,7 @@ class AppStateService extends ChangeNotifier {
     DateTime? dateOfBirth,
     String? gender,
     String? nationality,
+    String? profileImagePath,
   }) {
     _racerProfile ??= RacerProfile();
     _racerProfile!.firstName = firstName ?? _racerProfile!.firstName;
@@ -33,6 +36,7 @@ class AppStateService extends ChangeNotifier {
     _racerProfile!.dateOfBirth = dateOfBirth ?? _racerProfile!.dateOfBirth;
     _racerProfile!.gender = gender ?? _racerProfile!.gender;
     _racerProfile!.nationality = nationality ?? _racerProfile!.nationality;
+    _racerProfile!.profileImagePath = profileImagePath ?? _racerProfile!.profileImagePath;
     notifyListeners();
   }
 
@@ -71,12 +75,15 @@ class AppStateService extends ChangeNotifier {
   void updateRacerProfileStep4({
     String? organization,
     String? membershipNumber,
+    DateTime? membershipPurchasedAt,
     String? classCategory,
   }) {
     _racerProfile ??= RacerProfile();
     _racerProfile!.organization = organization ?? _racerProfile!.organization;
     _racerProfile!.membershipNumber =
         membershipNumber ?? _racerProfile!.membershipNumber;
+    _racerProfile!.membershipPurchasedAt =
+        membershipPurchasedAt ?? _racerProfile!.membershipPurchasedAt;
     _racerProfile!.classCategory =
         classCategory ?? _racerProfile!.classCategory;
     notifyListeners();
@@ -94,6 +101,12 @@ class AppStateService extends ChangeNotifier {
 
   void setWaiverSignature(WaiverSignature signature) {
     _waiverSignature = signature;
+    _waiverInitials = null;
+    notifyListeners();
+  }
+
+  void setWaiverInitials(List<String> initials) {
+    _waiverInitials = initials;
     notifyListeners();
   }
 
@@ -101,6 +114,7 @@ class AppStateService extends ChangeNotifier {
     _selectedEvent = null;
     _eventRegistration = null;
     _waiverSignature = null;
+    _waiverInitials = null;
     notifyListeners();
   }
 }

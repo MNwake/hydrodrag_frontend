@@ -4,6 +4,7 @@ import '../services/app_state_service.dart';
 import '../widgets/language_toggle.dart';
 import '../models/racer_profile.dart';
 import '../models/event.dart';
+import '../l10n/app_localizations.dart';
 
 class RegistrationCompleteScreen extends StatelessWidget {
   const RegistrationCompleteScreen({super.key});
@@ -11,6 +12,7 @@ class RegistrationCompleteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final appState = Provider.of<AppStateService>(context);
     final racerProfile = appState.racerProfile;
     final event = appState.selectedEvent;
@@ -18,7 +20,7 @@ class RegistrationCompleteScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registration Complete'),
+        title: Text(l10n.registrationComplete),
         actions: const [
           LanguageToggle(isCompact: true),
           SizedBox(width: 8),
@@ -46,7 +48,7 @@ class RegistrationCompleteScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Success!',
+                l10n.success,
                 style: theme.textTheme.headlineLarge?.copyWith(
                   color: theme.colorScheme.primary,
                 ),
@@ -60,29 +62,29 @@ class RegistrationCompleteScreen extends StatelessWidget {
                     children: [
                       _buildInfoRow(
                         context,
-                        'Racer',
+                        l10n.racer,
                         racerProfile?.fullName ?? 'N/A',
                         Icons.person,
                       ),
                       const Divider(),
                       _buildInfoRow(
                         context,
-                        'Event',
+                        l10n.events,
                         event?.name ?? 'N/A',
                         Icons.event,
                       ),
                       const Divider(),
                       _buildInfoRow(
                         context,
-                        'Registration ID',
+                        l10n.registrationId,
                         registrationId,
                         Icons.confirmation_number,
                       ),
                       const Divider(),
                       _buildInfoRow(
                         context,
-                        'Waiver Status',
-                        'Signed',
+                        l10n.waiverStatus,
+                        l10n.signed,
                         Icons.verified,
                         isSuccess: true,
                       ),
@@ -96,14 +98,14 @@ class RegistrationCompleteScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/racer-dashboard',
+                      '/main',
                       (route) => false,
                     );
                   },
-                  icon: const Icon(Icons.dashboard),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text('Return to Event Dashboard'),
+                  icon: const Icon(Icons.event),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(l10n.backToEvents),
                   ),
                 ),
               ),
@@ -113,20 +115,30 @@ class RegistrationCompleteScreen extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        // TODO: View registration details
+                        // TODO: View registration details - will navigate to registration detail screen when implemented
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.viewRegistrationComingSoon ?? 'Registration details coming soon'),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.visibility),
-                      label: const Text('View Registration'),
+                      label: Text(l10n.viewRegistration),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        // TODO: Download waiver PDF
+                        // TODO: Download waiver PDF - will be implemented when backend provides PDF endpoint
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.downloadPdfComingSoon ?? 'PDF download coming soon'),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.download),
-                      label: const Text('Download PDF'),
+                      label: Text(l10n.downloadWaiverPdf),
                     ),
                   ),
                 ],

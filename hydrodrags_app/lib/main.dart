@@ -10,13 +10,13 @@ import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/racer_profile_screen.dart';
-import 'screens/events_screen.dart';
+import 'screens/server_unavailable_screen.dart';
 import 'screens/event_registration_screen.dart';
 import 'screens/waiver_overview_screen.dart';
 import 'screens/waiver_reading_screen.dart';
 import 'screens/waiver_signature_screen.dart';
 import 'screens/registration_complete_screen.dart';
-import 'screens/racer_dashboard_screen.dart';
+import 'screens/checkout_screen.dart';
 import 'models/event.dart';
 
 void main() {
@@ -49,7 +49,6 @@ class HydroDragsApp extends StatelessWidget {
             routes: {
               '/main': (context) => const MainNavigationScreen(),
               '/racer-profile': (context) => const RacerProfileScreen(),
-              '/events': (context) => const EventsScreen(),
               '/event-registration': (context) {
                 final event = ModalRoute.of(context)?.settings.arguments;
                 return EventRegistrationScreen(event: event is Event ? event : null);
@@ -58,7 +57,7 @@ class HydroDragsApp extends StatelessWidget {
               '/waiver-reading': (context) => const WaiverReadingScreen(),
               '/waiver-signature': (context) => const WaiverSignatureScreen(),
               '/registration-complete': (context) => const RegistrationCompleteScreen(),
-              '/racer-dashboard': (context) => const RacerDashboardScreen(),
+              '/checkout': (context) => const CheckoutScreen(),
             },
           );
         },
@@ -85,9 +84,18 @@ class _AuthWrapper extends StatelessWidget {
         }
 
         // Route based on auth status
-        if (authService.isAuthenticated) {
-          // User is authenticated, go to main navigation screen
-          return const MainNavigationScreen();
+        if (authService.isServerUnavailable) {
+          // Server is unavailable - show error screen
+          return const ServerUnavailableScreen();
+        } else if (authService.isAuthenticated) {
+          // User is authenticated, check profile completion
+          if (authService.profileComplete) {
+            // Profile is complete, go to main navigation screen
+            return const MainNavigationScreen();
+          } else {
+            // Profile is not complete, go to profile screen
+            return const RacerProfileScreen();
+          }
         } else {
           // User is not authenticated, show login
           return const LoginScreen();

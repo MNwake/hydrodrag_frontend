@@ -21,6 +21,8 @@ class WaiverSignature {
   final String fullLegalName;
   final String signatureData; // Base64 encoded signature drawing
   final DateTime signedAt;
+  /// Initials for each [initial] placeholder in the waiver (order preserved).
+  final List<String>? initials;
   final String? deviceInfo;
   final String? ipAddress;
 
@@ -29,6 +31,7 @@ class WaiverSignature {
     required this.fullLegalName,
     required this.signatureData,
     required this.signedAt,
+    this.initials,
     this.deviceInfo,
     this.ipAddress,
   });

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../data/waiver_2026.dart';
+import '../services/app_state_service.dart';
 import '../widgets/language_toggle.dart';
 
 class WaiverReadingScreen extends StatefulWidget {
@@ -11,10 +15,36 @@ class WaiverReadingScreen extends StatefulWidget {
 class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolledToEnd = false;
+  late List<TextEditingController> _initialControllers;
+  late List<FocusNode> _initialFocusNodes;
+  late List<GlobalKey> _initialRowKeys;
+  int? _focusedInitialIndex; // which initial field has focus, null if none
+  static const int _initialCount = 8;
 
   @override
   void initState() {
     super.initState();
+    _initialControllers = List.generate(
+      _initialCount,
+      (_) => TextEditingController(),
+    );
+    _initialFocusNodes = List.generate(
+      _initialCount,
+      (_) => FocusNode(),
+    );
+    for (var i = 0; i < _initialCount; i++) {
+      final idx = i;
+      _initialFocusNodes[i].addListener(() {
+        if (_initialFocusNodes[idx].hasFocus) {
+          setState(() => _focusedInitialIndex = idx);
+        } else {
+          setState(() {
+            if (_focusedInitialIndex == idx) _focusedInitialIndex = null;
+          });
+        }
+      });
+    }
+    _initialRowKeys = List.generate(_initialCount, (_) => GlobalKey());
     _scrollController.addListener(_onScroll);
   }
 
@@ -22,7 +52,31 @@ class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    for (final c in _initialControllers) {
+      c.dispose();
+    }
+    for (final f in _initialFocusNodes) {
+      f.dispose();
+    }
     super.dispose();
+  }
+
+  void _goToNextInitial() {
+    final current = _focusedInitialIndex;
+    if (current == null || current >= _initialCount - 1) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+    final nextIdx = current + 1;
+    final nextContext = _initialRowKeys[nextIdx].currentContext;
+    if (nextContext != null) {
+      Scrollable.ensureVisible(
+        nextContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+    _initialFocusNodes[nextIdx].requestFocus();
   }
 
   void _onScroll() {
@@ -35,36 +89,29 @@ class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
     }
   }
 
+  List<String> get _initials =>
+      _initialControllers.map((c) => c.text.trim()).toList();
+
+  bool get _allInitialsFilled {
+    if (_initialControllers.length != _initialCount) return false;
+    return _initialControllers.every((c) => c.text.trim().length >= 1);
+  }
+
+  void _continueToSign() {
+    if (!_allInitialsFilled) return;
+    final appState = Provider.of<AppStateService>(context, listen: false);
+    appState.setWaiverInitials(_initials);
+    Navigator.of(context).pushNamed('/waiver-signature');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Sample waiver content - replace with actual content from backend
-    const waiverContent = '''
-LIABILITY WAIVER AND RELEASE OF CLAIMS
-
-PLEASE READ CAREFULLY BEFORE SIGNING
-
-In consideration of being permitted to participate in HydroDrags events and activities, I hereby acknowledge, agree, and represent that:
-
-1. RISK OF INJURY: I understand and acknowledge that participation in watercraft racing and related activities involves inherent and serious risks of physical injury, including but not limited to: collision with other participants, watercraft, or obstacles; falls; exposure to water; mechanical failure; and other hazards.
-
-2. ASSUMPTION OF RISK: I voluntarily assume full responsibility for any risks of loss, property damage, or personal injury, including death, that may be sustained by me or any loss or damage to property owned by me, as a result of my participation in HydroDrags events.
-
-3. RELEASE AND WAIVER: I hereby release, waive, discharge, and covenant not to sue HydroDrags, its officers, directors, employees, agents, volunteers, sponsors, and all other persons or entities associated with the event (collectively "Releasees") from all liability to me for any loss or damage, and any claim or demands on account of injury to my person or property, or resulting in my death, arising out of or related to my participation in HydroDrags events.
-
-4. INDEMNIFICATION: I agree to indemnify and hold harmless the Releasees from any loss, liability, damage, or cost they may incur due to my participation in the event.
-
-5. MEDICAL CARE: I consent to receive medical treatment which may be deemed advisable in the event of injury, accident, or illness during my participation.
-
-6. REPRESENTATIONS: I represent that I am physically fit and have no medical conditions that would prevent my safe participation in the event.
-
-BY SIGNING THIS WAIVER, I ACKNOWLEDGE THAT I HAVE READ AND UNDERSTAND THIS RELEASE AND WAIVER OF LIABILITY, AND I VOLUNTARILY AGREE TO BE BOUND BY ITS TERMS.
-''';
+    int initialIndex = 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Liability Waiver'),
+        title: const Text('2026 HydroDrag Waiver'),
         actions: const [
           LanguageToggle(isCompact: true),
           SizedBox(width: 8),
@@ -72,12 +119,13 @@ BY SIGNING THIS WAIVER, I ACKNOWLEDGE THAT I HAVE READ AND UNDERSTAND THIS RELEA
       ),
       body: Column(
         children: [
-          // Scroll progress indicator
           LinearProgressIndicator(
             value: _hasScrolledToEnd
                 ? 1.0
                 : _scrollController.hasClients
-                    ? (_scrollController.position.pixels / _scrollController.position.maxScrollExtent).clamp(0.0, 1.0)
+                    ? (_scrollController.position.pixels /
+                            _scrollController.position.maxScrollExtent)
+                        .clamp(0.0, 1.0)
                     : 0.0,
           ),
           Expanded(
@@ -88,26 +136,78 @@ BY SIGNING THIS WAIVER, I ACKNOWLEDGE THAT I HAVE READ AND UNDERSTAND THIS RELEA
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'LIABILITY WAIVER AND RELEASE OF CLAIMS',
-                    style: theme.textTheme.headlineMedium?.copyWith(
+                    '2026 HydroDrag Waiver, Release, Risk Assumption',
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Text(
-                    'PLEASE READ CAREFULLY BEFORE SIGNING',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    'PARTICIPANTS MUST INITIAL ALL PLACES. BOTH MINORS AND GUARDIANS MUST INITIAL.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    waiverContent,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
+                  ...waiver2026Segments.map((segment) {
+                    final needsInitial = segment.needsInitial;
+                    final idx = needsInitial ? initialIndex++ : null;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          segment.text,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.5,
+                          ),
+                        ),
+                        if (needsInitial && idx != null && idx < _initialCount) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            key: _initialRowKeys[idx],
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Initials:',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                width: 80,
+                                child: TextFormField(
+                                  controller: _initialControllers[idx],
+                                  focusNode: _initialFocusNodes[idx],
+                                  textCapitalization: TextCapitalization.characters,
+                                  maxLength: 4,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[A-Za-z]'),
+                                    ),
+                                  ],
+                                  decoration: InputDecoration(
+                                    hintText: '___',
+                                    counterText: '',
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 32),
                   if (!_hasScrolledToEnd)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -121,7 +221,7 @@ BY SIGNING THIS WAIVER, I ACKNOWLEDGE THAT I HAVE READ AND UNDERSTAND THIS RELEA
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Please scroll to the end of the waiver to continue',
+                              'Please scroll to the end of the waiver and complete all initials to continue.',
                               style: theme.textTheme.bodyMedium,
                             ),
                           ),
@@ -145,19 +245,36 @@ BY SIGNING THIS WAIVER, I ACKNOWLEDGE THAT I HAVE READ AND UNDERSTAND THIS RELEA
               ],
             ),
             child: SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _hasScrolledToEnd
-                      ? () {
-                          Navigator.of(context).pushNamed('/waiver-signature');
-                        }
-                      : null,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text('I Understand'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!_allInitialsFilled && _hasScrolledToEnd && _focusedInitialIndex == null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Please initial all sections above.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _focusedInitialIndex != null
+                          ? _goToNextInitial
+                          : (_hasScrolledToEnd && _allInitialsFilled
+                              ? _continueToSign
+                              : null),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          _focusedInitialIndex != null ? 'Next' : 'Continue to Sign',
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
