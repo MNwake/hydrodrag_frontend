@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/api_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/event.dart';
 import '../models/matchup.dart';
@@ -8,6 +11,7 @@ import '../models/speed_ranking.dart';
 import '../services/auth_service.dart';
 import '../services/event_service.dart';
 import '../services/error_handler_service.dart';
+import '../services/event_websocket_service.dart';
 import '../widgets/bracket_column.dart';
 import '../widgets/language_toggle.dart';
 
@@ -20,7 +24,11 @@ class _ClassOption {
 }
 
 class LiveBracketsTabScreen extends StatefulWidget {
-  const LiveBracketsTabScreen({super.key});
+  const LiveBracketsTabScreen({super.key, this.isTabSelected = false});
+
+  /// True when the Results tab is the currently selected tab in main navigation.
+  /// Used to connect/disconnect the event WebSocket when the user switches to this tab.
+  final bool isTabSelected;
 
   @override
   State<LiveBracketsTabScreen> createState() => _LiveBracketsTabScreenState();
@@ -32,6 +40,13 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
   String? _selectedClassKey;
   List<RoundBase> _rounds = [];
   SpeedSession? _speedSession;
+  /// Live countdown for top-speed session; synced from API on refresh.
+  int? _displayRemainingSeconds;
+  Timer? _countdownTimer;
+  EventWebSocketService? _eventWsService;
+  StreamSubscription<Map<String, dynamic>>? _wsSubscription;
+  /// Event id we're currently connected to; avoid disconnect/reconnect when same event.
+  String? _connectedEventId;
   bool _isLoadingEvents = true;
   bool _isLoadingBrackets = false;
   String? _error;
@@ -109,6 +124,136 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     _loadEvents();
   }
 
+  @override
+  void dispose() {
+    _disconnectEventWebSocket();
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveBracketsTabScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only connect when user switches TO the Results tab. Do not disconnect when
+    // they switch away — keep the connection so we still receive broadcasts and
+    // the view is up to date when they return.
+    if (widget.isTabSelected && !oldWidget.isTabSelected) {
+      _connectEventWebSocket();
+    }
+  }
+
+  void _connectEventWebSocket() {
+    if (!widget.isTabSelected) return;
+    final event = _selectedEvent;
+    if (event == null) return;
+    // Already connected to this event — don't disconnect/reconnect (avoids dropping broadcasts).
+    if (_connectedEventId == event.id && _eventWsService != null) {
+      return;
+    }
+    _disconnectEventWebSocket();
+    _connectedEventId = event.id;
+    final wsUrl = ApiConfig.eventWebSocketUrl(event.id);
+    print('=== Results WS: connecting to event ${event.id} (${event.name}) ===');
+    _eventWsService = EventWebSocketService();
+    _eventWsService!.connect(wsUrl);
+    _wsSubscription = _eventWsService!.messages.listen(_onWsMessage);
+  }
+
+  void _disconnectEventWebSocket() {
+    if (_eventWsService != null || _wsSubscription != null) {
+      print('=== Results WS: disconnecting (was event $_connectedEventId) ===');
+    }
+    _connectedEventId = null;
+    _wsSubscription?.cancel();
+    _wsSubscription = null;
+    _eventWsService?.disconnect();
+    _eventWsService = null;
+  }
+
+  void _onWsMessage(Map<String, dynamic> msg) {
+    if (!mounted) return;
+    try {
+      final type = msg['type'] as String?;
+      final eventId = msg['event_id'] as String?;
+      final classKey = msg['class_key'];
+      final selectedId = _selectedEvent?.id;
+      final selectedClass = _selectedClassKey;
+
+      print(
+        '=== Results WS message === type=$type event_id=$eventId class_key=$classKey '
+        '| selected event=$selectedId class=$selectedClass',
+      );
+
+      if (eventId != selectedId) {
+        print('=== Results WS skip: event_id mismatch ===');
+        return;
+      }
+      if (type != 'brackets_update' && type != 'speed_session_update') {
+        return;
+      }
+
+      if (type == 'brackets_update') {
+        if (selectedClass == null || classKey != selectedClass) {
+          print('=== Results WS skip: class_key mismatch (brackets) ===');
+          return;
+        }
+        final roundsList = msg['rounds'] as List<dynamic>? ?? [];
+        print('=== Results WS applying brackets_update rounds=${roundsList.length} ===');
+        setState(() {
+          _rounds = roundsList
+              .map((r) => RoundBase.fromJson(r as Map<String, dynamic>))
+              .toList();
+        });
+      } else if (type == 'speed_session_update') {
+        if (selectedClass == null || classKey != selectedClass) {
+          print('=== Results WS skip: class_key mismatch (speed) selectedClass=$selectedClass classKey=$classKey ===');
+          return;
+        }
+        final payload = msg;
+        final updated = SpeedSession.fromWebSocketUpdate(
+          eventId!,
+          classKey is String ? classKey as String : selectedClass!,
+          payload,
+          existing: _speedSession,
+        );
+        print(
+          '=== Results WS applying speed_session_update remaining=${updated.remainingSeconds} '
+          'rankings=${updated.rankings.length} ===',
+        );
+        setState(() {
+          _speedSession = updated;
+          if (updated.isActive && updated.remainingSeconds != null) {
+            _displayRemainingSeconds = updated.remainingSeconds;
+            _startCountdownTimer();
+          } else {
+            _stopCountdownTimer();
+          }
+        });
+      }
+    } catch (e, st) {
+      print('=== Results WS _onWsMessage error === $e');
+      print(st);
+    }
+  }
+
+  void _startCountdownTimer() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_displayRemainingSeconds != null && _displayRemainingSeconds! > 0) {
+          _displayRemainingSeconds = _displayRemainingSeconds! - 1;
+        }
+      });
+    });
+  }
+
+  void _stopCountdownTimer() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    _displayRemainingSeconds = null;
+  }
+
   Future<void> _loadEvents() async {
     setState(() {
       _isLoadingEvents = true;
@@ -131,6 +276,7 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
             _loadResults(first, _selectedClassKey);
           }
         });
+        if (widget.isTabSelected) _connectEventWebSocket();
       }
     } catch (e) {
       ErrorHandlerService.logError(e, context: 'Load Events');
@@ -189,6 +335,7 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
       _error = null;
       _rounds = [];
       _speedSession = null;
+      _stopCountdownTimer();
     });
 
     try {
@@ -200,6 +347,14 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
         setState(() {
           _speedSession = session;
           _isLoadingBrackets = false;
+          if (session != null &&
+              session.isActive &&
+              session.remainingSeconds != null) {
+            _displayRemainingSeconds = session.remainingSeconds;
+            _startCountdownTimer();
+          } else {
+            _stopCountdownTimer();
+          }
         });
       }
     } catch (e) {
@@ -215,12 +370,14 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
 
   void _onEventSelected(Event? event) {
     if (event == null) return;
+    _disconnectEventWebSocket();
     final firstClassKey = event.classes.isNotEmpty ? event.classes.first.key : null;
     setState(() {
       _selectedEvent = event;
       _selectedClassKey = firstClassKey;
     });
     _loadResults(event, firstClassKey);
+    if (widget.isTabSelected) _connectEventWebSocket();
   }
 
   void _onClassSelected(_ClassOption? option) {
@@ -565,12 +722,16 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     String status;
     if (session.isStopped) {
       status = l10n?.speedSessionEnded ?? 'Session ended';
-    } else if (session.isActive && session.remainingSeconds != null) {
-      final secs = session.remainingSeconds!;
-      final mins = secs ~/ 60;
-      final s = secs % 60;
-      final timeStr = '$mins:${s.toString().padLeft(2, '0')}';
-      status = '${l10n?.speedSessionRemaining ?? 'Time remaining'}: $timeStr';
+    } else if (session.isActive) {
+      final secs = _displayRemainingSeconds ?? session.remainingSeconds;
+      if (secs != null) {
+        final mins = secs ~/ 60;
+        final s = secs % 60;
+        final timeStr = '$mins:${s.toString().padLeft(2, '0')}';
+        status = '${l10n?.speedSessionRemaining ?? 'Time remaining'}: $timeStr';
+      } else {
+        status = l10n?.speedSessionActive ?? 'Session in progress';
+      }
     } else if (session.startedAt == null) {
       status = l10n?.speedSessionNotStarted ?? 'Session not started';
     } else {

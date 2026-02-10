@@ -54,4 +54,14 @@ class ApiConfig {
   /// GET /speed/session — speed session for an event/class (includes rankings)
   static String speedSession(String eventId, String classKey) =>
       '$baseUrl/speed/session?event_id=${Uri.encodeComponent(eventId)}&class_key=${Uri.encodeComponent(classKey)}';
+
+  /// WebSocket URL for live event updates (brackets, speed session).
+  /// Converts http(s) base URL to ws(s).
+  static String eventWebSocketUrl(String eventId) {
+    final uri = Uri.parse(baseUrl);
+    final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final host = uri.host;
+    final port = uri.hasPort ? ':${uri.port}' : '';
+    return '$scheme://$host$port/ws/events/${Uri.encodeComponent(eventId)}';
+  }
 }

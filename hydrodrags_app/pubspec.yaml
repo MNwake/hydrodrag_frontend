@@ -47,6 +47,9 @@ dependencies:
   
   # HTTP client
   http: ^1.2.0
+
+  # WebSocket for live event updates (brackets, speed session)
+  web_socket_channel: ^3.0.1
   
   # Signature capture
   signature: ^5.5.0

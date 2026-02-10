@@ -14,18 +14,42 @@ class SpeedRankingItem {
   });
 
   factory SpeedRankingItem.fromJson(Map<String, dynamic> json) {
-    final firstName = json['racer_first_name'] as String?;
-    final lastName = json['racer_last_name'] as String?;
-    String? racerName = json['racer_name'] as String?;
-    if (racerName == null && (firstName != null || lastName != null)) {
-      racerName = [firstName, lastName].where((s) => s != null && s.isNotEmpty).join(' ');
+    String? racerName;
+    String registrationId = json['registration_id'] as String? ?? '';
+
+    final registration = json['registration'];
+    if (registration is Map<String, dynamic>) {
+      registrationId = registration['id'] as String? ?? registrationId;
+      final racer = registration['racer'];
+      if (racer is Map<String, dynamic>) {
+        racerName = racer['full_name'] as String? ??
+            _buildRacerName(
+              racer['first_name'] as String?,
+              racer['last_name'] as String?,
+            );
+      }
     }
+    if (racerName == null) {
+      final firstName = json['racer_first_name'] as String?;
+      final lastName = json['racer_last_name'] as String?;
+      racerName = json['racer_name'] as String?;
+      if (racerName == null && (firstName != null || lastName != null)) {
+        racerName = _buildRacerName(firstName, lastName);
+      }
+    }
+
     return SpeedRankingItem(
       place: (json['place'] as num?)?.toInt() ?? 0,
-      registrationId: json['registration_id'] as String? ?? '',
+      registrationId: registrationId,
       topSpeed: (json['top_speed'] as num?)?.toDouble() ?? 0,
       racerName: racerName?.trim().isEmpty == true ? null : racerName,
     );
+  }
+
+  static String? _buildRacerName(String? firstName, String? lastName) {
+    final parts = [firstName?.trim(), lastName?.trim()]
+        .where((s) => s != null && s.isNotEmpty);
+    return parts.isEmpty ? null : parts.join(' ');
   }
 
   String get displayName => racerName?.trim().isNotEmpty == true
@@ -102,6 +126,63 @@ class SpeedSession {
       rankings: list
           .map((e) => SpeedRankingItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+    );
+  }
+
+  /// Builds a session from a WebSocket broadcast payload (partial update).
+  /// Merges with [existing] for id, durationSeconds, totalPausedSeconds when not in payload.
+  static SpeedSession fromWebSocketUpdate(
+    String eventId,
+    String classKey,
+    Map<String, dynamic> payload, {
+    SpeedSession? existing,
+  }) {
+    final sessionMap = payload['session'];
+    final session = sessionMap is Map<String, dynamic> ? sessionMap : null;
+    final rankingsList = payload['rankings'] as List<dynamic>? ?? [];
+
+    final id = existing?.id ?? '';
+    final durationSeconds = existing?.durationSeconds ?? 0;
+    final totalPausedSeconds = existing?.totalPausedSeconds ?? 0;
+
+    DateTime? startedAt;
+    DateTime? stoppedAt;
+    DateTime? pausedAt;
+    int? remainingSeconds;
+    if (session != null) {
+      startedAt = session['started_at'] != null
+          ? DateTime.tryParse(session['started_at'] as String)
+          : existing?.startedAt;
+      stoppedAt = session['stopped_at'] != null
+          ? DateTime.tryParse(session['stopped_at'] as String)
+          : existing?.stoppedAt;
+      pausedAt = session['paused_at'] != null
+          ? DateTime.tryParse(session['paused_at'] as String)
+          : existing?.pausedAt;
+      remainingSeconds = (session['remaining_seconds'] as num?)?.toInt() ??
+          existing?.remainingSeconds;
+    } else {
+      startedAt = existing?.startedAt;
+      stoppedAt = existing?.stoppedAt;
+      pausedAt = existing?.pausedAt;
+      remainingSeconds = existing?.remainingSeconds;
+    }
+
+    final rankings = rankingsList
+        .map((e) => SpeedRankingItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    return SpeedSession(
+      id: id,
+      eventId: eventId,
+      classKey: classKey,
+      startedAt: startedAt,
+      stoppedAt: stoppedAt,
+      pausedAt: pausedAt,
+      durationSeconds: durationSeconds,
+      totalPausedSeconds: totalPausedSeconds,
+      remainingSeconds: remainingSeconds,
+      rankings: rankings.isNotEmpty ? rankings : (existing?.rankings ?? []),
     );
   }
 

@@ -16,30 +16,29 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-  late final List<Widget> _screens;
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      InfoTabScreen(
-        onPurchaseSpectatorTickets: () => setState(() => _currentIndex = 1),
-      ),
-      const EventsTabScreen(),
-      const LiveBracketsTabScreen(),
-      const AccountManagementTabScreen(),
-    ];
-  }
+  static const int _resultsTabIndex = 2;
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final l10n = AppLocalizations.of(context);
 
+    final screens = [
+      InfoTabScreen(
+        onPurchaseSpectatorTickets: () => setState(() => _currentIndex = 1),
+      ),
+      const EventsTabScreen(),
+      KeyedSubtree(
+        key: const ValueKey('results_tab'),
+        child: LiveBracketsTabScreen(isTabSelected: _currentIndex == _resultsTabIndex),
+      ),
+      const AccountManagementTabScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
