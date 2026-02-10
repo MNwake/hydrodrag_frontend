@@ -14,7 +14,7 @@ class CreateCheckoutResponse {
 
   factory CreateCheckoutResponse.fromJson(Map<String, dynamic> json) {
     return CreateCheckoutResponse(
-      orderId: json['order_id'] as String? ?? '',
+      orderId: json['paypal_order_id'] as String? ?? json['order_id'] as String? ?? '',
       approvalUrl: json['approval_url'] as String? ?? '',
     );
   }
@@ -52,23 +52,27 @@ class CheckoutService {
         'spectator_single_day_passes': registration.spectatorSingleDayPasses,
         'spectator_weekend_passes': registration.spectatorWeekendPasses,
       };
+      final bodyJson = jsonEncode(body);
+      final headers = await _headers();
 
       if (kDebugMode) {
-        print('=== API Request: Create Checkout (PayPal) ===');
-        print('URL: $uri');
-        print('Body: $body');
+        debugPrint('[Checkout] === API REQUEST: Create PayPal order (Pay with PayPal) ===');
+        debugPrint('[Checkout] Method: POST');
+        debugPrint('[Checkout] URL: $uri');
+        debugPrint('[Checkout] Headers: Content-Type=${headers['Content-Type']}, Authorization=Bearer ***');
+        debugPrint('[Checkout] Request body: $bodyJson');
       }
 
       final response = await http.post(
         uri,
-        headers: await _headers(),
-        body: jsonEncode(body),
+        headers: headers,
+        body: bodyJson,
       );
 
       if (kDebugMode) {
-        print('=== API Response: Create Checkout ===');
-        print('Status: ${response.statusCode}');
-        print('Body: ${response.body}');
+        debugPrint('[Checkout] === API RESPONSE: Create PayPal order ===');
+        debugPrint('[Checkout] Status: ${response.statusCode}');
+        debugPrint('[Checkout] Response body: ${response.body}');
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -77,34 +81,38 @@ class CheckoutService {
       }
       return null;
     } catch (e) {
-      if (kDebugMode) print('Error creating checkout: $e');
+      if (kDebugMode) debugPrint('[Checkout] Create checkout error: $e');
       rethrow;
     }
   }
 
   /// Capture PayPal order after user has approved in browser.
-  /// POST /events/{eventId}/checkout/capture
+  /// POST /webhooks/paypal/events/{eventId}/checkout/capture
   Future<bool> capturePayPalOrder(String eventId, String orderId) async {
     try {
       final uri = Uri.parse(ApiConfig.checkoutCapture(eventId));
-      final body = {'order_id': orderId};
+      final body = {'paypal_order_id': orderId};
+      final bodyJson = jsonEncode(body);
+      final headers = await _headers();
 
       if (kDebugMode) {
-        print('=== API Request: Capture Checkout ===');
-        print('URL: $uri');
-        print('Body: $body');
+        debugPrint('[Checkout] === API REQUEST: Capture PayPal order (I\'ve completed payment) ===');
+        debugPrint('[Checkout] Method: POST');
+        debugPrint('[Checkout] URL: $uri');
+        debugPrint('[Checkout] Headers: Content-Type=${headers['Content-Type']}, Authorization=Bearer ***');
+        debugPrint('[Checkout] Request body: $bodyJson');
       }
 
       final response = await http.post(
         uri,
-        headers: await _headers(),
-        body: jsonEncode(body),
+        headers: headers,
+        body: bodyJson,
       );
 
       if (kDebugMode) {
-        print('=== API Response: Capture Checkout ===');
-        print('Status: ${response.statusCode}');
-        print('Body: ${response.body}');
+        debugPrint('[Checkout] === API RESPONSE: Capture PayPal order ===');
+        debugPrint('[Checkout] Status: ${response.statusCode}');
+        debugPrint('[Checkout] Response body: ${response.body}');
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -113,7 +121,7 @@ class CheckoutService {
       }
       return false;
     } catch (e) {
-      if (kDebugMode) print('Error capturing checkout: $e');
+      if (kDebugMode) debugPrint('[Checkout] Capture checkout error: $e');
       rethrow;
     }
   }

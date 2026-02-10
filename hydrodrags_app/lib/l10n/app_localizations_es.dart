@@ -946,4 +946,76 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get iveCompletedPayment => 'He completado el pago';
+
+  @override
+  String get purchaseSpectatorTickets => 'Comprar entradas de espectador';
+
+  @override
+  String get purchaseSpectatorTicketsDescription => 'Compre entradas de espectador para asistir al evento. No se requiere registro de corredor.';
+
+  @override
+  String get purchaserInfo => 'Datos del comprador';
+
+  @override
+  String get purchaserInfoDescription => 'Usaremos esto para identificar sus entradas en la puerta.';
+
+  @override
+  String get purchaserName => 'Nombre completo';
+
+  @override
+  String get spectatorTicketSuccess => 'Entradas compradas';
+
+  @override
+  String get spectatorTicketSuccessMessage => 'Sus entradas de espectador están listas.';
+
+  @override
+  String get spectatorTicketScreenshotHint => 'Tome una captura de pantalla de cada entrada a continuación, o muestre esta pantalla en la puerta. Sus entradas también se pueden consultar por su número de teléfono en la puerta.';
+
+  @override
+  String get spectatorTicketLookupByPhone => 'Las entradas se pueden consultar por su número de teléfono en la puerta.';
+
+  @override
+  String get spectatorTicketsEmailedNote => 'Sus entradas han sido enviadas por correo electrónico. Si no las ve, revise su carpeta de correo no deseado o spam.';
+
+  @override
+  String get spectatorTicketCompleteNote => '¡Le hemos enviado sus entradas por correo! Si no están en su bandeja de entrada, revise la carpeta de correo no deseado o spam. También puede tomar una captura de pantalla de las entradas a continuación, mostrar esta pantalla en la puerta o pedir al personal que las busque por número de teléfono.';
+
+  @override
+  String get bracketsTab => 'Llaves';
+
+  @override
+  String get resultsTab => 'Resultados';
+
+  @override
+  String get noBracketsAvailable => 'Aún no hay llaves disponibles';
+
+  @override
+  String get noBracketsAvailableDescription => 'Las llaves aparecerán aquí cuando el evento haya comenzado y se publiquen los resultados.';
+
+  @override
+  String get noResultsAvailable => 'Aún no hay resultados disponibles';
+
+  @override
+  String get topSpeedRankings => 'Velocidad máxima';
+
+  @override
+  String get topSpeedLeader => 'Más rápido';
+
+  @override
+  String get noSpeedRankingsYet => 'Aún no hay resultados de velocidad';
+
+  @override
+  String get noSpeedRankingsDescription => 'Las velocidades máximas aparecerán aquí a medida que se registren.';
+
+  @override
+  String get speedSessionEnded => 'Sesión finalizada';
+
+  @override
+  String get speedSessionRemaining => 'Tiempo restante';
+
+  @override
+  String get speedSessionNotStarted => 'Sesión no iniciada';
+
+  @override
+  String get speedSessionActive => 'Sesión en curso';
 }

@@ -17,6 +17,8 @@ import 'login_screen.dart';
 import 'pwc_management_screen.dart';
 import 'bio_edit_screen.dart';
 import 'sponsors_edit_screen.dart';
+import 'my_tickets_screen.dart';
+import 'my_registrations_screen.dart';
 
 class AccountManagementTabScreen extends StatefulWidget {
   const AccountManagementTabScreen({super.key});
@@ -947,6 +949,32 @@ class _AccountManagementTabScreenState extends State<AccountManagementTabScreen>
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const PWCManagementScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.confirmation_number,
+                      title: 'My Tickets',
+                      subtitle: 'View your spectator tickets',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const MyTicketsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.assignment,
+                      title: 'My Registrations',
+                      subtitle: 'View your event registrations',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const MyRegistrationsScreen(),
                           ),
                         );
                       },

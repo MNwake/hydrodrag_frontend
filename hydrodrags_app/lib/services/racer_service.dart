@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/pwc.dart';
 import '../models/racer_profile.dart';
+import '../models/my_registration.dart';
+import '../models/spectator_ticket.dart';
 import 'auth_service.dart';
 
 /// Service for managing racer profile data and API interactions
@@ -382,6 +384,72 @@ class RacerService {
         print('Error getting racer profile: $e');
       }
       return null;
+    }
+  }
+
+  /// GET /me/tickets — list spectator tickets for the current racer
+  Future<List<SpectatorTicket>> getMyTickets() async {
+    try {
+      await _authService.refreshTokenIfNeeded();
+      final headers = _getAuthHeaders();
+      final uri = Uri.parse(ApiConfig.myTicketsEndpoint);
+
+      if (kDebugMode) {
+        print('=== API Request: Get My Tickets ===');
+        print('URL: $uri');
+        print('Method: GET');
+      }
+
+      final response = await http.get(uri, headers: headers);
+
+      if (kDebugMode) {
+        print('=== API Response: Get My Tickets ===');
+        print('Status: ${response.statusCode}');
+      }
+
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list
+            .map((e) => SpectatorTicket.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      if (kDebugMode) print('Error getting my tickets: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /me/registrations — list event registrations for the current racer
+  Future<List<MyRegistration>> getMyRegistrations() async {
+    try {
+      await _authService.refreshTokenIfNeeded();
+      final headers = _getAuthHeaders();
+      final uri = Uri.parse(ApiConfig.myRegistrationsEndpoint);
+
+      if (kDebugMode) {
+        print('=== API Request: Get My Registrations ===');
+        print('URL: $uri');
+        print('Method: GET');
+      }
+
+      final response = await http.get(uri, headers: headers);
+
+      if (kDebugMode) {
+        print('=== API Response: Get My Registrations ===');
+        print('Status: ${response.statusCode}');
+      }
+
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list
+            .map((e) => MyRegistration.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      if (kDebugMode) print('Error getting my registrations: $e');
+      rethrow;
     }
   }
 

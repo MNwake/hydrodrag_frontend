@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,13 +24,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isCapturing = false;
 
   Future<void> _payWithPayPal() async {
+    if (kDebugMode) {
+      debugPrint('[Checkout] Pay with PayPal button pressed');
+    }
     final appState = Provider.of<AppStateService>(context, listen: false);
     final event = appState.selectedEvent;
     final registration = appState.eventRegistration;
 
     if (event == null || registration == null) {
+      if (kDebugMode) debugPrint('[Checkout] Abort: event or registration is null');
       ErrorHandlerService.showError(context, 'Registration or event not found');
       return;
+    }
+    if (kDebugMode) {
+      debugPrint('[Checkout] Creating PayPal order for eventId=${event.id}');
     }
 
     setState(() => _isCreatingOrder = true);
@@ -42,6 +50,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() => _isCreatingOrder = false);
 
+      if (kDebugMode) {
+        debugPrint('[Checkout] Create order response: orderId=${result?.orderId}, hasApprovalUrl=${result?.approvalUrl.isNotEmpty ?? false}');
+      }
       if (result == null || result.approvalUrl.isEmpty) {
         ErrorHandlerService.showError(context, 'Could not start PayPal checkout');
         return;
@@ -49,12 +60,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       _orderId = result.orderId;
       final uri = Uri.parse(result.approvalUrl);
+      if (kDebugMode) {
+        debugPrint('[Checkout] Opening PayPal approval URL in browser');
+      }
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ErrorHandlerService.showError(context, 'Could not open PayPal');
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('[Checkout] Pay with PayPal error: $e');
       if (mounted) {
         setState(() => _isCreatingOrder = false);
         ErrorHandlerService.logError(e, context: 'Create Checkout');
@@ -64,12 +79,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _confirmPaymentComplete() async {
+    if (kDebugMode) {
+      debugPrint('[Checkout] I\'ve completed payment button pressed');
+    }
     final appState = Provider.of<AppStateService>(context, listen: false);
     final event = appState.selectedEvent;
 
     if (event == null || _orderId == null || _orderId!.isEmpty) {
+      if (kDebugMode) debugPrint('[Checkout] Abort: no event or orderId (orderId=$_orderId)');
       ErrorHandlerService.showError(context, 'No pending order. Start checkout first.');
       return;
+    }
+    if (kDebugMode) {
+      debugPrint('[Checkout] Capturing PayPal order for eventId=${event.id}, orderId=$_orderId');
     }
 
     setState(() => _isCapturing = true);
@@ -82,12 +104,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() => _isCapturing = false);
 
+      if (kDebugMode) {
+        debugPrint('[Checkout] Capture response: success=$success');
+      }
       if (success) {
         Navigator.of(context).pushReplacementNamed('/registration-complete');
       } else {
         ErrorHandlerService.showError(context, 'Payment could not be confirmed. Try again or contact support.');
       }
     } catch (e) {
+      if (kDebugMode) debugPrint('[Checkout] I\'ve completed payment error: $e');
       if (mounted) {
         setState(() => _isCapturing = false);
         ErrorHandlerService.logError(e, context: 'Capture Checkout');

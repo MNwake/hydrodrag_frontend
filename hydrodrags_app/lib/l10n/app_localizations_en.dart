@@ -946,4 +946,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iveCompletedPayment => 'I\'ve completed payment';
+
+  @override
+  String get purchaseSpectatorTickets => 'Purchase spectator tickets';
+
+  @override
+  String get purchaseSpectatorTicketsDescription => 'Buy spectator tickets to attend the event. No racer registration required.';
+
+  @override
+  String get purchaserInfo => 'Purchaser information';
+
+  @override
+  String get purchaserInfoDescription => 'We\'ll use this to identify your tickets at the gate.';
+
+  @override
+  String get purchaserName => 'Full name';
+
+  @override
+  String get spectatorTicketSuccess => 'Tickets purchased';
+
+  @override
+  String get spectatorTicketSuccessMessage => 'Your spectator tickets are ready.';
+
+  @override
+  String get spectatorTicketScreenshotHint => 'Take a screenshot of each ticket below, or present this screen at the gate. Your tickets can also be looked up by your phone number at the gate.';
+
+  @override
+  String get spectatorTicketLookupByPhone => 'Tickets can be looked up by your phone number at the gate.';
+
+  @override
+  String get spectatorTicketsEmailedNote => 'Your tickets have been emailed to you. If you don\'t see them, check your junk or spam folder.';
+
+  @override
+  String get spectatorTicketCompleteNote => 'We\'ve emailed your tickets to you! If they\'re not in your inbox, check your junk or spam folder. You can also screenshot the tickets below, show this screen at the gate, or have staff look them up by phone number.';
+
+  @override
+  String get bracketsTab => 'Brackets';
+
+  @override
+  String get resultsTab => 'Results';
+
+  @override
+  String get noBracketsAvailable => 'No brackets available yet';
+
+  @override
+  String get noBracketsAvailableDescription => 'Brackets will appear here once the event has started and results are posted.';
+
+  @override
+  String get noResultsAvailable => 'No results available yet';
+
+  @override
+  String get topSpeedRankings => 'Top speed';
+
+  @override
+  String get topSpeedLeader => 'Fastest';
+
+  @override
+  String get noSpeedRankingsYet => 'No speed results yet';
+
+  @override
+  String get noSpeedRankingsDescription => 'Top speeds will appear here as they are recorded.';
+
+  @override
+  String get speedSessionEnded => 'Session ended';
+
+  @override
+  String get speedSessionRemaining => 'Time remaining';
+
+  @override
+  String get speedSessionNotStarted => 'Session not started';
+
+  @override
+  String get speedSessionActive => 'Session in progress';
 }

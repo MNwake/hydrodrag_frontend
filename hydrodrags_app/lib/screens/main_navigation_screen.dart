@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import 'info_tab_screen.dart';
 import 'events_tab_screen.dart';
-import 'racers_list_tab_screen.dart';
+import 'live_brackets_tab_screen.dart';
 import 'account_management_tab_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -15,18 +16,25 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const InfoTabScreen(),
-    const EventsTabScreen(),
-    const RacersListTabScreen(),
-    const AccountManagementTabScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      InfoTabScreen(
+        onPurchaseSpectatorTickets: () => setState(() => _currentIndex = 1),
+      ),
+      const EventsTabScreen(),
+      const LiveBracketsTabScreen(),
+      const AccountManagementTabScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: IndexedStack(
@@ -51,10 +59,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedIcon: Icon(Icons.calendar_today),
             label: 'Events',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Racers',
+          NavigationDestination(
+            icon: const Icon(Icons.emoji_events_outlined),
+            selectedIcon: const Icon(Icons.emoji_events),
+            label: l10n?.resultsTab ?? 'Results',
           ),
           NavigationDestination(
             icon: Icon(authService.isAuthenticated ? Icons.person_outline : Icons.lock_outline),

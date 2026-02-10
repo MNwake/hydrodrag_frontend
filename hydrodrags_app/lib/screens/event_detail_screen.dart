@@ -291,6 +291,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
           actionTooltip: 'Add to Calendar',
           onAction: () => _addEventToCalendar(context),
         ),
+        if (_currentEvent.isOpen) ...[
+          const SizedBox(height: 24),
+          _buildPurchaseSpectatorTicketsSection(context),
+        ],
         const SizedBox(height: 24),
         if (_currentEvent.description != null && _currentEvent.description!.isNotEmpty) ...[
           const SizedBox(height: 24),
@@ -311,8 +315,56 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
     );
   }
 
+  Widget _buildPurchaseSpectatorTicketsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel(
+          theme,
+          Icons.confirmation_number_outlined,
+          l10n?.purchaseSpectatorTickets ?? 'Purchase event tickets',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n?.purchaseSpectatorTicketsDescription ??
+              'Buy spectator tickets to attend the event. No racer registration required.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushNamed(
+                '/spectator-purchase',
+                arguments: _currentEvent,
+              );
+            },
+            icon: const Icon(Icons.confirmation_number, size: 20),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                l10n?.purchaseSpectatorTickets ?? 'Purchase spectator tickets',
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildClassesSection(BuildContext context, List<EventClass> classes) {
     final theme = Theme.of(context);
+    final authService = Provider.of<AuthService>(context);
+    final isOpen = _currentEvent.isOpen;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -361,6 +413,26 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
             ],
           );
         }),
+        if (authService.isAuthenticated && isOpen) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(
+                  '/event-registration',
+                  arguments: _currentEvent,
+                );
+              },
+              icon: const Icon(Icons.how_to_reg, size: 20),
+              label: const Text('Register for This Event'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -890,7 +962,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top: Register for This Event button
+        // Top: Register for This Event button (green like banner)
         if (isAuthenticated && isOpen) ...[
           SizedBox(
             width: double.infinity,
@@ -905,6 +977,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
               label: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text('Register for This Event'),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
               ),
             ),
           ),

@@ -135,9 +135,6 @@ class _EventsTabScreenState extends State<EventsTabScreen> {
                             itemCount: _events.length,
                             itemBuilder: (context, index) {
                               final event = _events[index];
-                              final chipLabel = event.isOpen
-                                  ? (isLoggedIn ? l10n.register : l10n.open)
-                                  : l10n.closed;
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 16),
                                 child: InkWell(
@@ -164,18 +161,43 @@ class _EventsTabScreenState extends State<EventsTabScreen> {
                                                 ),
                                               ),
                                             ),
-                                            Chip(
-                                              label: Text(
-                                                chipLabel,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
+                                            if (event.isOpen)
+                                              FilledButton(
+                                                onPressed: () {
+                                                  if (isLoggedIn) {
+                                                    Navigator.of(context).pushNamed(
+                                                      '/event-registration',
+                                                      arguments: event,
+                                                    );
+                                                  } else {
+                                                    // Spectator: open event details, not registration
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (context) => EventDetailScreen(event: event),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: Colors.green,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                 ),
+                                                child: Text(
+                                                  isLoggedIn ? l10n.register : l10n.open,
+                                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                ),
+                                              )
+                                            else
+                                              Chip(
+                                                label: Text(
+                                                  l10n.closed,
+                                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                ),
+                                                backgroundColor: theme.colorScheme.errorContainer,
                                               ),
-                                              backgroundColor: event.isOpen
-                                                  ? theme.colorScheme.primaryContainer
-                                                  : theme.colorScheme.errorContainer,
-                                            ),
                                           ],
                                         ),
                                     const SizedBox(height: 16),

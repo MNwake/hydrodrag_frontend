@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/event.dart';
 import '../models/event_registration_list_item.dart';
+import '../models/round.dart';
+import '../models/speed_ranking.dart';
 import 'auth_service.dart';
 
 /// Service for managing event data and API interactions
@@ -162,6 +164,96 @@ class EventService {
     } catch (e) {
       if (kDebugMode) {
         print('Error getting event registrations: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get bracket rounds for an event.
+  /// GET /events/{event_id}/rounds
+  /// Pass [classKey] to filter by racing class.
+  Future<List<RoundBase>> getRounds(String eventId, {String? classKey}) async {
+    try {
+      final uri = Uri.parse(ApiConfig.eventRounds(eventId, classKey: classKey));
+      final headers = _getAuthHeaders() ?? <String, String>{};
+      headers['Content-Type'] = 'application/json';
+      headers['accept'] = 'application/json';
+
+      if (kDebugMode) {
+        print('=== API Request: Get Event Rounds ===');
+        print('URL: $uri');
+        print('Method: GET');
+      }
+
+      final response = await http.get(uri, headers: headers);
+
+      if (kDebugMode) {
+        print('=== API Response: Get Event Rounds ===');
+        print('Status Code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        final List<dynamic> list =
+            responseBody is List ? responseBody : (responseBody['rounds'] as List? ?? []);
+        final rounds = list
+            .map((json) => RoundBase.fromJson(json as Map<String, dynamic>))
+            .toList();
+        if (kDebugMode) {
+          print('Loaded ${rounds.length} rounds');
+        }
+        return rounds;
+      } else {
+        if (kDebugMode) {
+          print('Failed to get rounds: ${response.statusCode}');
+          print('Response: ${response.body}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting rounds: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get speed session for an event/class (includes rankings).
+  /// GET /speed/session?event_id=...&class_key=...
+  /// Returns null if 404 (no session found).
+  Future<SpeedSession?> getSpeedSession(String eventId, String classKey) async {
+    try {
+      final uri = Uri.parse(ApiConfig.speedSession(eventId, classKey));
+
+      if (kDebugMode) {
+        print('=== API Request: Get Speed Session ===');
+        print('URL: $uri');
+        print('Method: GET');
+      }
+
+      final response = await http.get(uri);
+
+      if (kDebugMode) {
+        print('=== API Response: Get Speed Session ===');
+        print('Status Code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return SpeedSession.fromJson(json);
+      }
+      if (response.statusCode == 404) {
+        return null;
+      }
+      if (kDebugMode) {
+        print('Failed to get speed session: ${response.statusCode}');
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting speed session: $e');
       }
       rethrow;
     }

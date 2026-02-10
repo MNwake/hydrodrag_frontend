@@ -68,6 +68,9 @@ dependencies:
   # YouTube player
   youtube_player_flutter: ^9.0.0
 
+  # QR code generation for spectator tickets
+  qr_flutter: ^4.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

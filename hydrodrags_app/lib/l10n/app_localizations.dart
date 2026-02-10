@@ -1960,6 +1960,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I\'ve completed payment'**
   String get iveCompletedPayment;
+
+  /// No description provided for @purchaseSpectatorTickets.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase spectator tickets'**
+  String get purchaseSpectatorTickets;
+
+  /// No description provided for @purchaseSpectatorTicketsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy spectator tickets to attend the event. No racer registration required.'**
+  String get purchaseSpectatorTicketsDescription;
+
+  /// No description provided for @purchaserInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchaser information'**
+  String get purchaserInfo;
+
+  /// No description provided for @purchaserInfoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll use this to identify your tickets at the gate.'**
+  String get purchaserInfoDescription;
+
+  /// No description provided for @purchaserName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get purchaserName;
+
+  /// No description provided for @spectatorTicketSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Tickets purchased'**
+  String get spectatorTicketSuccess;
+
+  /// No description provided for @spectatorTicketSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your spectator tickets are ready.'**
+  String get spectatorTicketSuccessMessage;
+
+  /// No description provided for @spectatorTicketScreenshotHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a screenshot of each ticket below, or present this screen at the gate. Your tickets can also be looked up by your phone number at the gate.'**
+  String get spectatorTicketScreenshotHint;
+
+  /// No description provided for @spectatorTicketLookupByPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tickets can be looked up by your phone number at the gate.'**
+  String get spectatorTicketLookupByPhone;
+
+  /// No description provided for @spectatorTicketsEmailedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tickets have been emailed to you. If you don\'t see them, check your junk or spam folder.'**
+  String get spectatorTicketsEmailedNote;
+
+  /// No description provided for @spectatorTicketCompleteNote.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ve emailed your tickets to you! If they\'re not in your inbox, check your junk or spam folder. You can also screenshot the tickets below, show this screen at the gate, or have staff look them up by phone number.'**
+  String get spectatorTicketCompleteNote;
+
+  /// No description provided for @bracketsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Brackets'**
+  String get bracketsTab;
+
+  /// No description provided for @resultsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get resultsTab;
+
+  /// No description provided for @noBracketsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No brackets available yet'**
+  String get noBracketsAvailable;
+
+  /// No description provided for @noBracketsAvailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Brackets will appear here once the event has started and results are posted.'**
+  String get noBracketsAvailableDescription;
+
+  /// No description provided for @noResultsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No results available yet'**
+  String get noResultsAvailable;
+
+  /// No description provided for @topSpeedRankings.
+  ///
+  /// In en, this message translates to:
+  /// **'Top speed'**
+  String get topSpeedRankings;
+
+  /// No description provided for @topSpeedLeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Fastest'**
+  String get topSpeedLeader;
+
+  /// No description provided for @noSpeedRankingsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No speed results yet'**
+  String get noSpeedRankingsYet;
+
+  /// No description provided for @noSpeedRankingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Top speeds will appear here as they are recorded.'**
+  String get noSpeedRankingsDescription;
+
+  /// No description provided for @speedSessionEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Session ended'**
+  String get speedSessionEnded;
+
+  /// No description provided for @speedSessionRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining'**
+  String get speedSessionRemaining;
+
+  /// No description provided for @speedSessionNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Session not started'**
+  String get speedSessionNotStarted;
+
+  /// No description provided for @speedSessionActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Session in progress'**
+  String get speedSessionActive;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

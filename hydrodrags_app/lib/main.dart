@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'config/api_config.dart';
 import 'l10n/app_localizations.dart';
 import 'theme/app_theme.dart';
 import 'services/language_service.dart';
@@ -17,9 +19,13 @@ import 'screens/waiver_reading_screen.dart';
 import 'screens/waiver_signature_screen.dart';
 import 'screens/registration_complete_screen.dart';
 import 'screens/checkout_screen.dart';
+import 'screens/spectator_purchase_screen.dart';
 import 'models/event.dart';
 
 void main() {
+  if (kDebugMode) {
+    debugPrint('[App] Starting - API_BASE_URL=${ApiConfig.baseUrl}');
+  }
   runApp(const HydroDragsApp());
 }
 
@@ -58,6 +64,15 @@ class HydroDragsApp extends StatelessWidget {
               '/waiver-signature': (context) => const WaiverSignatureScreen(),
               '/registration-complete': (context) => const RegistrationCompleteScreen(),
               '/checkout': (context) => const CheckoutScreen(),
+              '/spectator-purchase': (context) {
+                final event = ModalRoute.of(context)?.settings.arguments;
+                if (event is! Event) {
+                  return const Scaffold(
+                    body: Center(child: Text('Event required')),
+                  );
+                }
+                return SpectatorPurchaseScreen(event: event);
+              },
             },
           );
         },

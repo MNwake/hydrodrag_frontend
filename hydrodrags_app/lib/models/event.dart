@@ -250,9 +250,12 @@ class Event {
   // Event Information
   final EventInfo eventInfo;
   
+  // Format: "double_elimination" (bracket) or "top_speed"
+  final String? format;
+
   // Status
   final EventRegistrationStatus registrationStatus;
-  
+
   // Results (optional, populated after event)
   final String? resultsUrl; // URL to results page/document
   final Map<String, dynamic>? results; // Structured results data
@@ -278,6 +281,7 @@ class Event {
     this.classes = const [],
     this.rules = const [],
     required this.eventInfo,
+    this.format,
     required this.registrationStatus,
     this.resultsUrl,
     this.results,
@@ -322,6 +326,7 @@ class Event {
       eventInfo: json['event_info'] != null && json['event_info'] is Map<String, dynamic>
           ? EventInfo.fromJson(json['event_info'] as Map<String, dynamic>)
           : EventInfo(),
+      format: json['format'] as String?,
       registrationStatus: _parseRegistrationStatus(json['registration_status'] as String? ?? 'closed'),
       resultsUrl: json['results_url'] as String?,
       results: json['results'] as Map<String, dynamic>?,
@@ -348,6 +353,7 @@ class Event {
       'classes': classes.map((item) => item.toJson()).toList(),
       'rules': rules.map((item) => item.toJson()).toList(),
       'event_info': eventInfo.toJson(),
+      'format': format,
       'registration_status': _registrationStatusToString(registrationStatus),
       'results_url': resultsUrl,
       'results': results,
@@ -388,6 +394,12 @@ class Event {
 
   /// Check if registration is currently open
   bool get isOpen => registrationStatus == EventRegistrationStatus.open;
+
+  /// True if event format is top-speed (speed rankings). False for bracket / double elimination.
+  bool get isTopSpeed => format == 'top_speed';
+
+  /// True if event uses bracket (double elimination) format.
+  bool get isBracketFormat => format == null || format == 'double_elimination';
 
   /// Check if event is in the past
   bool get isPast {
