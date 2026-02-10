@@ -1,224 +1,102 @@
-# HydroDrags Mobile App
+# HydroDrags
 
-A Flutter mobile application for managing PWC (Personal Watercraft) drag racing events, racer registrations, and profiles.
+A Flutter mobile app for **HydroDrags** PWC (Personal Watercraft) drag racing: events, racer profiles, class-based registration, and live results. Built for iOS and Android with English and Spanish support.
+
+## Overview
+
+HydroDrags connects racers and spectators to jet ski drag events. Racers manage their profile and watercraft, register for events by class, sign waivers, and pay via PayPal. Spectators can browse events and purchase admission without an account. The app shows live results—bracket progression for elimination events and top-speed rankings with a session timer for speed-format events.
 
 ## Features
 
-### Authentication & Profile
-- **Email/Code Authentication**: Passwordless login via email verification code
-- **Persistent Login**: Automatic token refresh for seamless user experience
-- **Profile Management**: Complete racer profile with personal info, contact details, address, and membership
-- **Profile Image Upload**: Upload and manage profile pictures
-- **Multi-language Support**: English and Spanish localization
+### For Racers
+- **Passwordless auth** — Email verification code; persistent sessions with token refresh
+- **Profile & PWC** — Full racer profile (contact, address, membership), profile photo, and CRUD for personal watercraft (make, model, class, primary PWC)
+- **Events** — Browse events, view details (schedule, venue, info, registered racers), and register by class with waiver and PayPal checkout
+- **My registrations & tickets** — View registrations and digital tickets with QR codes
 
-### Personal Watercraft (PWC) Management
-- **PWC CRUD Operations**: Create, read, update, and delete personal watercraft
-- **PWC Details**: Track make, model, year, engine class, modifications, and more
-- **Primary PWC**: Set a default PWC for race registrations
-- **Comprehensive Data**: Store registration numbers, serial numbers, and custom notes
+### For Spectators
+- **No login required** — Purchase spectator tickets with name, phone, and email; receive tickets with QR codes and confirmation by email
 
-### Events
-- **Event Browsing**: View all upcoming events with details
-- **Event Details**: Comprehensive event information including:
-  - Location and venue details
-  - Date and time
-  - Race schedule
-  - Event information (parking, tickets, food & drink, seating)
-  - Registered racers list
-- **Event Registration**: Simplified registration flow using profile and PWC data
+### Results
+- **Bracket events** — Double-elimination bracket view with rounds and matchups
+- **Top-speed events** — Session timer (remaining time / ended / not started) and live rankings (place, racer name, speed in mph) with pull-to-refresh
 
-### Registration Flow
-1. **Class/Division Selection**: Choose racing class
-2. **PWC Selection**: Select from registered PWCs
-3. **Waiver**: Review and sign liability waiver
-4. **Payment**: PayPal integration (to be implemented)
+### General
+- **English & Spanish** — Full localization (l10n)
+- **Resilience** — Graceful handling of server unavailability; token-based auth for offline-capable flows
 
-### Other Features
-- **Racers Directory**: Browse all registered racers
-- **Account Management**: Quick access to profile editing and PWC management
-- **Server Health Monitoring**: Graceful handling of server unavailability
-- **Offline Support**: Token-based authentication works offline
+## Tech Stack
 
-## Architecture
-
-### State Management
-- **Provider**: Global state management
-- **Services**: Business logic and API integration
-  - `AuthService`: Authentication and token management
-  - `RacerService`: Profile operations
-  - `PWCService`: PWC management
-  - `EventService`: Event data and registrations
-  - `AppStateService`: Temporary app state
-  - `LanguageService`: Language preferences
-
-### Navigation
-- **Bottom Tab Navigation**: Main app navigation with 4 tabs
-  - Info (About/Rules/Sponsors)
-  - Events
-  - Racers List
-  - Account Management
-- **Route-based Navigation**: For registration flow and detail screens
+- **Flutter** (Dart) — Cross-platform UI
+- **Provider** — App-wide state
+- **REST API** — Backend for auth, profile, events, registrations, PayPal, and speed sessions
 
 ## Project Structure
 
 ```
 lib/
-├── config/          # API configuration
-├── l10n/            # Localization files (English & Spanish)
-├── models/          # Data models
-│   ├── event.dart
-│   ├── pwc.dart
-│   ├── racer_profile.dart
-│   ├── registered_racer.dart
-│   └── ...
-├── screens/         # UI screens
-│   ├── login_screen.dart
-│   ├── main_navigation_screen.dart
-│   ├── racer_profile_screen.dart
-│   ├── pwc_management_screen.dart
-│   ├── event_detail_screen.dart
-│   └── ...
-├── services/        # Business logic & API
-│   ├── auth_service.dart
-│   ├── racer_service.dart
-│   ├── pwc_service.dart
-│   ├── event_service.dart
-│   └── ...
-├── theme/           # App theming
-├── utils/           # Utilities (phone formatting, etc.)
-└── widgets/         # Reusable widgets
+├── config/          # API base URL and endpoints
+├── l10n/            # Localization (app_en.arb, app_es.arb)
+├── models/          # Domain models (event, racer, PWC, registration, speed session, etc.)
+├── screens/         # Full-screen UIs (login, main tabs, event detail, checkout, results, …)
+├── services/        # API and business logic (auth, racer, PWC, event, checkout, config)
+├── theme/           # Material theme and styling
+├── utils/           # Helpers (e.g. phone formatting)
+└── widgets/         # Reusable components (bracket column, etc.)
 ```
 
 ## Setup
 
 ### Prerequisites
-- Flutter SDK (latest stable)
-- Dart SDK
-- iOS: Xcode (for iOS builds)
-- Android: Android Studio (for Android builds)
+- Flutter SDK (stable)
+- Xcode (iOS) or Android Studio / SDK (Android)
 
-### Installation
+### Run locally
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
-
-3. Generate localization files:
-   ```bash
-   flutter gen-l10n
-   ```
-
-4. Configure API endpoint in `lib/config/api_config.dart`
-
-5. Run the app:
-   ```bash
-   flutter run
-   ```
-
-## Configuration
-
-### API Configuration
-Update `lib/config/api_config.dart` with your backend API URL:
-```dart
-static const String baseUrl = 'http://your-api-url:8000';
-```
-
-### Environment Variables
-For production, use `--dart-define` to set API URLs:
 ```bash
-flutter run --dart-define=API_URL=https://api.hydrodrags.com
+cd hydrodrags_app
+flutter pub get
+flutter gen-l10n
+flutter run
 ```
 
-## Backend API Requirements
+### API configuration
 
-The app expects the following backend endpoints:
+The app reads the backend URL from the environment. Default is the hosted API; override for local development:
 
-### Authentication
-- `POST /auth/request-code` - Request verification code
-- `POST /auth/verify-code` - Verify code and get tokens
-- `POST /auth/refresh` - Refresh access token
-- `GET /health` - Server health check
+```bash
+flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8000
+```
 
-### Profile
-- `GET /me` - Get current racer profile
-- `PATCH /racers/{racer_id}` - Update racer profile
-- `POST /me/profile-image` - Upload profile image
+Set `API_BASE_URL` in `lib/config/api_config.dart` or via `--dart-define` for production builds.
 
-### PWC Management
-- `GET /me/pwcs` - Get racer's PWCs
-- `POST /me/pwcs` - Create PWC
-- `PATCH /me/pwcs/{pwc_id}` - Update PWC
-- `DELETE /me/pwcs/{pwc_id}` - Delete PWC
-- `PATCH /me/pwcs/{pwc_id}/set-primary` - Set primary PWC
+## Backend
 
-### Events
-- `GET /events` - Get all events
-- `GET /events/{event_id}` - Get event details
-- `GET /events/{event_id}/registrations` - Get registered racers
+The app expects a REST API for auth, profile, PWC, events, registrations, PayPal checkout (racer and spectator), and speed sessions. Example surface:
 
-See `lib/services/AUTH_BACKEND_MATCH.md` for detailed API specifications.
+- **Auth:** `POST /auth/request-code`, `POST /auth/verify-code`, `POST /auth/refresh`, `GET /health`
+- **Profile:** `GET /me`, `PATCH /racers/{id}`, `POST /me/profile-image`
+- **PWC:** `GET|POST /me/pwc`, `PATCH|DELETE /me/pwcs/{id}`, `PATCH .../set-primary`
+- **Events:** `GET /events`, `GET /events/{id}`, `GET /registrations/event/{id}/registrations`
+- **Checkout:** `POST /paypal/events/{id}/checkout/create`, `.../capture`; `POST /paypal/spectator-checkout/create`, `.../capture`
+- **Results:** `GET /speed/session?event_id=&class_key=` (for top-speed events); bracket data as used by the Results tab
+
+See service files and `lib/config/api_config.dart` for full endpoint usage.
 
 ## Localization
 
-The app supports English and Spanish. All user-facing strings are localized in:
-- `lib/l10n/app_en.arb` (English)
-- `lib/l10n/app_es.arb` (Spanish)
+Strings live in `lib/l10n/app_en.arb` and `lib/l10n/app_es.arb`. After editing:
 
-To add new strings:
-1. Add the key-value pair to both `.arb` files
-2. Run `flutter gen-l10n` to regenerate localization classes
-3. Use `AppLocalizations.of(context)!.yourKey` in code
+```bash
+flutter gen-l10n
+```
 
-## Testing
-
-### Manual Testing Checklist
-- [ ] Login flow (email/code verification)
-- [ ] Profile creation (all 4 steps)
-- [ ] Profile editing
-- [ ] PWC management (create, edit, delete, set primary)
-- [ ] Event browsing
-- [ ] Event detail view
-- [ ] Event registration flow
-- [ ] Waiver signing
-- [ ] Language switching
-- [ ] Server unavailable handling
-- [ ] Token refresh
-- [ ] Profile completion check
-
-## Known Issues & TODOs
-
-### High Priority
-- [ ] Simplify event registration to use profile/PWC data
-- [ ] Implement PayPal payment integration
-- [ ] Add error handling for all API calls
-- [ ] Implement racers list backend integration
-
-### Medium Priority
-- [ ] Add image caching for profile pictures
-- [ ] Implement event results display
-- [ ] Add search/filter for events and racers
-- [ ] Add pull-to-refresh on all list screens
-
-### Low Priority
-- [ ] Admin features
-- [ ] Push notifications
-- [ ] Offline data caching
-- [ ] Analytics integration
-
-## Contributing
-
-1. Follow Flutter/Dart style guidelines
-2. Ensure all new strings are localized
-3. Add appropriate error handling
-4. Test on both iOS and Android
-5. Update documentation as needed
+Use `AppLocalizations.of(context)!.keyName` in the app.
 
 ## License
 
-[Your License Here]
+Proprietary. All rights reserved.
 
-## Support
+---
 
-For issues or questions, please contact [support email] or open an issue in the repository.
+Part of my portfolio. For questions or collaboration, reach out via the contact details in my profile.
