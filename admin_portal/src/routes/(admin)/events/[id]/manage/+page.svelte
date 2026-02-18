@@ -28,6 +28,7 @@
 	} from '$lib/api/speed';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import { toast } from '$lib/stores/toast';
+	import { apiGetBlob } from '$lib/api/client';
 
 	let loading = true;
 	let error: string | null = null;
@@ -43,6 +44,7 @@
 	let sortKeyByClass: Record<string, SortKey> = {};
 	let sortDirByClass: Record<string, SortDir> = {};
 	let recordingWinnerMatchupId: string | null = null;
+	let exportingPdfClassKey: string | null = null; // class currently exporting PDF
 
 	// Admin notes and flags per matchup (UI only; API to be added later)
 	let matchupNotes: Record<string, string> = {};
@@ -426,6 +428,28 @@
 		delete next[classKey];
 		currentRoundByClass = next;
 		toast('Class reset to pre-event settings', 'success');
+	}
+
+	/** Export class bracket/matchups to PDF. */
+	async function exportClassPdf(classKey: string) {
+		const id = $page.params.id;
+		if (!id || !event) return;
+		exportingPdfClassKey = classKey;
+		const path = `/admin/events/${encodeURIComponent(id)}/classes/${encodeURIComponent(classKey)}/export-pdf`;
+		const res = await apiGetBlob(path);
+		exportingPdfClassKey = null;
+		if (!res.ok || !res.data) {
+			toast(res.error ?? 'Failed to export PDF', 'error');
+			return;
+		}
+		const blob = res.data;
+		const blobUrl = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = blobUrl;
+		a.download = `${event.name}-${classKey}-bracket.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
+		a.click();
+		URL.revokeObjectURL(blobUrl);
+		toast('PDF exported', 'success');
 	}
 
 
@@ -856,6 +880,12 @@
 		return r ? racerDisplay(r) : regId;
 	}
 
+	// Accordion: only one class section open at a time; default all closed
+	let expandedClassKey: string | null = null;
+	function toggleClassExpanded(classKey: string) {
+		expandedClassKey = expandedClassKey === classKey ? null : classKey;
+	}
+
 	// Reactive state - force updates by creating new object references
 	$: tabs = activeTab;
 	$: rounds = roundsByClass;
@@ -917,9 +947,19 @@
 		</div>
 	{:else}
 		{#each byClass as { classKey, classLabel, regs }}
-			<section class="manage-class-section">
-				<h2 class="manage-class-title">{classLabel}</h2>
-				
+			<section class="manage-class-section" class:is-expanded={expandedClassKey === classKey}>
+				<button
+					type="button"
+					class="manage-class-header"
+					onclick={() => toggleClassExpanded(classKey)}
+					aria-expanded={expandedClassKey === classKey}
+					aria-controls="manage-class-content-{classKey}"
+					id="manage-class-header-{classKey}"
+				>
+					<span class="manage-class-title">{classLabel}</span>
+					<span class="manage-class-chevron" aria-hidden="true">▼</span>
+				</button>
+				<div id="manage-class-content-{classKey}" class="manage-class-content" role="region" aria-labelledby="manage-class-header-{classKey}">
 				<div class="class-tabs">
 					<button
 						type="button"
@@ -995,6 +1035,14 @@
 										{/if}
 									{/if}
 									<button type="button" class="btn btn-secondary btn-sm" onclick={() => resetSpeedHandler(classKey)}>Reset</button>
+									<button
+										type="button"
+										class="btn btn-secondary btn-sm"
+										disabled={exportingPdfClassKey === classKey}
+										onclick={() => exportClassPdf(classKey)}
+									>
+										{exportingPdfClassKey === classKey ? 'Exporting…' : 'Export to PDF'}
+									</button>
 								</div>
 							{:else}
 								<div class="speed-session-info speed-session-pre">
@@ -1024,6 +1072,14 @@
 										onclick={() => startSpeedHandler(classKey)}
 									>
 										{speedSessionLoading[classKey] ? 'Starting…' : 'Start Session'}
+									</button>
+									<button
+										type="button"
+										class="btn btn-secondary btn-sm"
+										disabled={exportingPdfClassKey === classKey}
+										onclick={() => exportClassPdf(classKey)}
+									>
+										{exportingPdfClassKey === classKey ? 'Exporting…' : 'Export to PDF'}
 									</button>
 								</div>
 							{/if}
@@ -1115,13 +1171,25 @@
 										</button>
 									{/each}
 								</div>
-								<button
-									type="button"
-									class="btn btn-primary btn-sm"
-									onclick={() => (roundsByClass[classKey]?.length ? resetClassHandler(classKey) : generateMatchups(classKey))}
-								>
-									{roundsByClass[classKey]?.length ? 'Reset Class' : 'Generate New Round'}
-								</button>
+								<div class="round-actions">
+									<button
+										type="button"
+										class="btn btn-primary btn-sm"
+										onclick={() => (roundsByClass[classKey]?.length ? resetClassHandler(classKey) : generateMatchups(classKey))}
+									>
+										{roundsByClass[classKey]?.length ? 'Reset Class' : 'Generate New Round'}
+									</button>
+									{#if roundsByClass[classKey]?.length}
+										<button
+											type="button"
+											class="btn btn-secondary btn-sm"
+											disabled={exportingPdfClassKey === classKey}
+											onclick={() => exportClassPdf(classKey)}
+										>
+											{exportingPdfClassKey === classKey ? 'Exporting…' : 'Export to PDF'}
+										</button>
+									{/if}
+								</div>
 							</div>
 
 							{#if currentRound}
@@ -1310,6 +1378,7 @@
 						{/if}
 					</div>
 				{/if}
+				</div>
 			</section>
 		{/each}
 	{/if}
@@ -1317,13 +1386,51 @@
 
 <style>
 	.manage-class-section {
-		margin-bottom: 2rem;
+		margin-bottom: 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		overflow: hidden;
 	}
-	.manage-class-title {
+	.manage-class-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		padding: 0.75rem 1rem;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text);
+		background: var(--bg-card);
+		border: none;
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	.manage-class-header:hover {
+		background: var(--border);
+	}
+	.manage-class-header .manage-class-title {
 		font-size: 1.1rem;
 		font-weight: 600;
-		margin: 0 0 0.75rem 0;
-		color: var(--text);
+		margin: 0;
+		color: inherit;
+	}
+	.manage-class-chevron {
+		font-size: 0.7rem;
+		opacity: 0.7;
+		transition: transform 0.2s;
+	}
+	.manage-class-section.is-expanded .manage-class-chevron {
+		transform: rotate(180deg);
+	}
+	.manage-class-content {
+		display: none;
+		padding: 0 1rem 1rem 1rem;
+		border-top: 1px solid var(--border);
+		background: var(--bg);
+	}
+	.manage-class-section.is-expanded .manage-class-content {
+		display: block;
 	}
 	.class-tabs {
 		display: flex;
@@ -1358,6 +1465,12 @@
 		align-items: center;
 		gap: 1rem;
 		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+	.round-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
 		flex-wrap: wrap;
 	}
 	.round-tabs {

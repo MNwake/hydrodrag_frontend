@@ -44,7 +44,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
       final list = await racerService.getMyTickets();
       if (mounted) {
         setState(() {
-          _tickets = list;
+          _tickets = list.where((t) => !t.isUsed).toList();
           _loading = false;
           _error = null;
           _currentPage = 0;

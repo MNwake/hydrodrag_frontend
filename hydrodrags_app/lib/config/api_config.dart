@@ -25,6 +25,9 @@ class ApiConfig {
   static String eventRegistrations(String eventId) =>
       '$baseUrl/registrations/event/$eventId/registrations';
 
+  /// POST /registrations/promo/verify — verify promo code (valid, code, type)
+  static String get promoVerify => '$baseUrl/registrations/promo/verify';
+
   /// POST /paypal/events/{event_id}/checkout/create — create PayPal order
   static String checkoutCreate(String eventId) =>
       '$baseUrl/paypal/events/$eventId/checkout/create';

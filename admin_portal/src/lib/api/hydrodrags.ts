@@ -58,6 +58,28 @@ export interface SpanishContent {
 	tagline?: string | null;
 }
 
+export interface PromoCode {
+	code: string;
+	type: string; // "single_class" | "all_classes"
+	is_active: boolean;
+}
+
+export interface Waiver {
+	title: string;
+	version: string;
+	effective_date?: string | null; // ISO datetime from server
+	content: string;
+	is_active: boolean;
+}
+
+export interface WaiverUpdate {
+	title?: string | null;
+	version?: string | null;
+	effective_date?: string | null; // ISO date or datetime
+	content?: string | null;
+	is_active?: boolean | null;
+}
+
 export interface AssetUpdateResponse {
 	field: string;
 	url: string | null;
@@ -85,6 +107,8 @@ export interface HydroDragsConfigResponse {
 	media_partners: Sponsor[];
 	news: NewsItem[];
 	social_links: SocialLink[];
+	promo_codes: PromoCode[];
+	waiver?: Waiver | null;
 
 	is_active: boolean;
 }
@@ -105,6 +129,8 @@ export interface HydroDragsConfigUpdate {
 	spectator_single_day_price?: number | null;
 	spectator_weekend_price?: number | null;
 
+	promo_codes?: PromoCode[] | null;
+
 	is_active?: boolean | null;
 }
 
@@ -118,6 +144,13 @@ export async function updateHydroDragsConfig(
 	payload: HydroDragsConfigUpdate
 ): Promise<ApiResponse<HydroDragsConfigResponse>> {
 	return apiPut<HydroDragsConfigResponse>(base(), payload as unknown as Record<string, unknown>);
+}
+
+/** PUT update waiver (admin). Send content as HTML to preserve formatting. */
+export async function updateWaiver(
+	payload: WaiverUpdate
+): Promise<ApiResponse<HydroDragsConfigResponse>> {
+	return apiPut<HydroDragsConfigResponse>(`${base()}/waiver`, payload as unknown as Record<string, unknown>);
 }
 
 // ---------- Sponsors CRUD ----------

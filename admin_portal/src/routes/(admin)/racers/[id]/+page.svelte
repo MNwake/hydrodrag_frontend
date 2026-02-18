@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { fetchRacer, type RacerProfile } from '$lib/api/resources';
+	import { fetchRacer, downloadRacerWaiver, type RacerProfile } from '$lib/api/resources';
 	import { fetchRegistrationsByRacer } from '$lib/api/registrations';
 	import type { EventRegistrationBase } from '$lib/api/events';
 
@@ -8,6 +8,7 @@
 	let error: string | null = null;
 	let racer: RacerProfile | null = null;
 	let registrations: EventRegistrationBase[] = [];
+	let waiverDownloading: number | null = null; // index being downloaded
 
 	function fullName(r: RacerProfile): string {
 		const full = (r.full_name ?? '').toString().trim();
@@ -28,6 +29,16 @@
 		if (!iso) return '—';
 		const d = new Date(iso);
 		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+	}
+
+	async function onDownloadWaiver(racerId: string, index: number) {
+		waiverDownloading = index;
+		const result = await downloadRacerWaiver(racerId, index);
+		waiverDownloading = null;
+		if (!result.ok && result.error) {
+			// Could wire to toast; for now just no-op on error
+			console.error(result.error);
+		}
 	}
 
 	function pwcDisplay(reg: EventRegistrationBase): string {
@@ -147,8 +158,28 @@
 				<dd>{fmtDateTime(racer.waiver_signed_at)}</dd>
 				<dt>Valid waiver</dt>
 				<dd>{racer.has_valid_waiver === true ? 'Yes' : 'No'}</dd>
-				<dt>Waiver path</dt>
-				<dd>{fmt(racer.waiver_path)}</dd>
+				<dt>Waivers</dt>
+				<dd>
+					{#if racer.waiver_paths && racer.waiver_paths.length > 0}
+						<ul class="waiver-list">
+							{#each racer.waiver_paths as path, i}
+								<li class="waiver-item">
+									<span class="waiver-path" title={path}>{path.split(/[/\\]/).pop() ?? path}</span>
+									<button
+										type="button"
+										class="btn btn-secondary btn-sm"
+										disabled={waiverDownloading === i}
+										on:click={() => racer && onDownloadWaiver(racer.id, i)}
+									>
+										{waiverDownloading === i ? 'Downloading…' : 'Download'}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						—
+					{/if}
+				</dd>
 				<dt>Is of age</dt>
 				<dd>{racer.is_of_age === true ? 'Yes' : 'No'}</dd>
 				<dt>Profile complete</dt>
@@ -291,5 +322,27 @@
 		margin: 0;
 		color: var(--text-muted);
 		font-size: 0.95rem;
+	}
+	.waiver-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.waiver-item {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+	.waiver-path {
+		font-size: 0.85em;
+		color: var(--text-muted);
+		max-width: 24ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>

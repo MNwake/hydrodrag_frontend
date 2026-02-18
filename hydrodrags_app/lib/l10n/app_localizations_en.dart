@@ -162,7 +162,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ihraMembershipNumberOptional => 'IHRA Membership # (Optional)';
 
   @override
-  String get ihraMembershipPurchasedAtOptional => 'IHRA Membership Purchased At (Optional)';
+  String get ihraMembershipPurchasedAtOptional => 'IHRA Membership Purchased At';
 
   @override
   String get classCategory => 'Class / Category';
@@ -946,6 +946,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get iveCompletedPayment => 'I\'ve completed payment';
+
+  @override
+  String get promoCode => 'Promo code';
+
+  @override
+  String get promoCodePlaceholder => 'Enter code';
+
+  @override
+  String get promoCodeApply => 'Apply';
+
+  @override
+  String get promoCodeRemove => 'Remove';
+
+  @override
+  String get promoCodeApplied => 'Applied';
+
+  @override
+  String get promoCodeInvalid => 'Invalid promo code';
+
+  @override
+  String get promoTypeSingleClass => 'One class';
+
+  @override
+  String get promoTypeAllClasses => 'All classes';
 
   @override
   String get purchaseSpectatorTickets => 'Purchase spectator tickets';

@@ -9,13 +9,17 @@ class AppStateService extends ChangeNotifier {
   Event? _selectedEvent;
   EventRegistration? _eventRegistration;
   WaiverSignature? _waiverSignature;
-  List<String>? _waiverInitials;
+  List<String>? _waiverInitials; // legacy; waiver flow now uses config HTML, no initials
+  String? _waiverContentHtml;
+  String? _waiverTitle;
 
   RacerProfile? get racerProfile => _racerProfile;
   Event? get selectedEvent => _selectedEvent;
   EventRegistration? get eventRegistration => _eventRegistration;
   WaiverSignature? get waiverSignature => _waiverSignature;
   List<String>? get waiverInitials => _waiverInitials;
+  String? get waiverContentHtml => _waiverContentHtml;
+  String? get waiverTitle => _waiverTitle;
 
   void setRacerProfile(RacerProfile profile) {
     _racerProfile = profile;
@@ -110,11 +114,19 @@ class AppStateService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setWaiverFromConfig({required String content, required String title}) {
+    _waiverContentHtml = content;
+    _waiverTitle = title;
+    notifyListeners();
+  }
+
   void clearRegistration() {
     _selectedEvent = null;
     _eventRegistration = null;
     _waiverSignature = null;
     _waiverInitials = null;
+    _waiverContentHtml = null;
+    _waiverTitle = null;
     notifyListeners();
   }
 }

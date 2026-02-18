@@ -3,7 +3,7 @@
  * All URLs derived from VITE_API_BASE_URL. No shared code with other clients.
  */
 
-import { apiGet } from '$lib/api/client';
+import { apiGet, apiGetBlob } from '$lib/api/client';
 import { fetchEvents as fetchEventsApi, type EventListResponse, type EventBase } from '$lib/api/events';
 import { fetchEventRegistrations, type EventRegistrationAdmin } from '$lib/api/registrations';
 
@@ -53,7 +53,7 @@ export interface RacerProfile extends RacerRow {
 	banner_image_path?: string | null;
 	banner_image_updated_at?: string | null;
 	profile_image_updated_at?: string | null;
-	waiver_path?: string | null;
+	waiver_paths?: string[] | null;
 	profile_complete?: boolean;
 }
 
@@ -64,6 +64,30 @@ export async function fetchRacers() {
 /** GET /admin/racers/{racer_id} — single racer profile (RacerBase). */
 export async function fetchRacer(id: string) {
 	return apiGet<RacerProfile>(ensureSlash(`/admin/racers/${id}`));
+}
+
+/**
+ * Download a racer's waiver PDF by index (from waiver_paths).
+ * Fetches with admin key and triggers browser download.
+ */
+export async function downloadRacerWaiver(
+	racerId: string,
+	index: number,
+	suggestedName?: string
+): Promise<{ ok: boolean; error: string | null }> {
+	const path = ensureSlash(`/admin/racers/${encodeURIComponent(racerId)}/waiver?index=${index}`);
+	const res = await apiGetBlob(path);
+	if (!res.ok || !res.data) {
+		return { ok: false, error: res.error ?? 'Download failed' };
+	}
+	const blob = res.data;
+	const blobUrl = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = blobUrl;
+	a.download = suggestedName ?? `waiver-${racerId}-${index}.pdf`;
+	a.click();
+	URL.revokeObjectURL(blobUrl);
+	return { ok: true, error: null };
 }
 
 /**

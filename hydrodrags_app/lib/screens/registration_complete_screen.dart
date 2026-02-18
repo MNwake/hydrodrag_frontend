@@ -109,40 +109,6 @@ class RegistrationCompleteScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: View registration details - will navigate to registration detail screen when implemented
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.viewRegistrationComingSoon ?? 'Registration details coming soon'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.visibility),
-                      label: Text(l10n.viewRegistration),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Download waiver PDF - will be implemented when backend provides PDF endpoint
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.downloadPdfComingSoon ?? 'PDF download coming soon'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.download),
-                      label: Text(l10n.downloadWaiverPdf),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

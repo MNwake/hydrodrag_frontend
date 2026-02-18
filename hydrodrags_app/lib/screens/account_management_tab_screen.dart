@@ -556,79 +556,6 @@ class _AccountManagementTabScreenState extends State<AccountManagementTabScreen>
     );
   }
 
-  Future<void> _editMembershipPurchasedAt() async {
-    final profile = _profile;
-    if (profile == null) return;
-
-    final l10n = AppLocalizations.of(context);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: profile.membershipPurchasedAt ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-      helpText: l10n?.ihraMembershipPurchasedAtOptional ?? 'Membership purchased at',
-    );
-    if (picked == null || !mounted) return;
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final racerService = RacerService(authService);
-      final currentProfile = _profile;
-      if (currentProfile == null) throw Exception('Profile not loaded');
-
-      final updatedProfile = RacerProfile(
-        firstName: currentProfile.firstName,
-        lastName: currentProfile.lastName,
-        dateOfBirth: currentProfile.dateOfBirth,
-        gender: currentProfile.gender,
-        nationality: currentProfile.nationality,
-        phoneNumber: currentProfile.phoneNumber,
-        email: currentProfile.email,
-        emergencyContactName: currentProfile.emergencyContactName,
-        emergencyContactPhone: currentProfile.emergencyContactPhone,
-        street: currentProfile.street,
-        city: currentProfile.city,
-        stateProvince: currentProfile.stateProvince,
-        country: currentProfile.country,
-        zipPostalCode: currentProfile.zipPostalCode,
-        organization: currentProfile.organization,
-        membershipNumber: currentProfile.membershipNumber,
-        membershipPurchasedAt: picked,
-        classCategory: currentProfile.classCategory,
-        bio: currentProfile.bio,
-        sponsors: currentProfile.sponsors,
-      );
-
-      final success = await racerService.updateRacerProfile(updatedProfile);
-      if (mounted) {
-        Navigator.pop(context);
-        if (success) {
-          await _loadProfile(forceRefresh: true);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n?.profileUpdated ?? 'Profile updated')),
-            );
-          }
-        } else {
-          ErrorHandlerService.showError(context, 'Failed to update profile');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ErrorHandlerService.logError(e, context: 'Save Membership Purchased At');
-        ErrorHandlerService.showError(context, e);
-      }
-    }
-  }
-
   Future<void> _saveProfileField(String field, String value) async {
     if (!mounted) return;
 
@@ -902,11 +829,11 @@ class _AccountManagementTabScreenState extends State<AccountManagementTabScreen>
                     _buildBasicInfoItem(
                       context,
                       icon: Icons.calendar_today,
-                      label: AppLocalizations.of(context)?.ihraMembershipPurchasedAtOptional ?? 'IHRA Membership Purchased At (Optional)',
+                      label: AppLocalizations.of(context)?.ihraMembershipPurchasedAtOptional ?? 'IHRA Membership Purchased At',
                       value: profile?.membershipPurchasedAt != null
                           ? '${profile!.membershipPurchasedAt!.month}/${profile.membershipPurchasedAt!.day}/${profile.membershipPurchasedAt!.year}'
                           : '—',
-                      onTap: _editMembershipPurchasedAt,
+                      onTap: null,
                     ),
                   ],
                 ),

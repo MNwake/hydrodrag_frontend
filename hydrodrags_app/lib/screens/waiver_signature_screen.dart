@@ -9,7 +9,6 @@ import '../services/error_handler_service.dart';
 import '../utils/waiver_pdf.dart';
 import '../widgets/language_toggle.dart';
 import '../models/waiver.dart';
-import '../models/racer_profile.dart';
 
 class WaiverSignatureScreen extends StatefulWidget {
   const WaiverSignatureScreen({super.key});
@@ -81,12 +80,7 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final racerService = RacerService(authService);
 
-    // Build full waiver PDF: text + initials + signature + date + name
-    final initials = appState.waiverInitials ?? [];
-    final initialsPadded = List<String>.from(initials);
-    while (initialsPadded.length < 8) {
-      initialsPadded.add('');
-    }
+    final htmlContent = appState.waiverContentHtml ?? '';
 
     if (mounted) {
       showDialog(
@@ -98,7 +92,7 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
 
     try {
       final pdfBytes = await buildWaiverPdf(
-        initials: initialsPadded,
+        htmlContent: htmlContent,
         signaturePngBytes: signatureBytes,
         signedDate: _signedDate,
         fullLegalName: _nameController.text.trim(),
@@ -122,7 +116,6 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
           fullLegalName: _nameController.text,
           signatureData: signatureData,
           signedAt: _signedDate,
-          initials: initials.isNotEmpty ? initials : null,
         );
 
         appState.setWaiverSignature(signature);
@@ -164,12 +157,12 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  '2026 HydroDrag Waiver — Signature',
+                  appState.waiverTitle ?? 'Waiver — Signature',
                   style: theme.textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Complete the date and sign below. You have already initialed all sections on the previous screen.',
+                  'Enter the date and your full legal name, then sign below.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

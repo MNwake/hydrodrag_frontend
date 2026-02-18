@@ -404,7 +404,7 @@ abstract class AppLocalizations {
   /// No description provided for @ihraMembershipPurchasedAtOptional.
   ///
   /// In en, this message translates to:
-  /// **'IHRA Membership Purchased At (Optional)'**
+  /// **'IHRA Membership Purchased At'**
   String get ihraMembershipPurchasedAtOptional;
 
   /// No description provided for @classCategory.
@@ -1960,6 +1960,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I\'ve completed payment'**
   String get iveCompletedPayment;
+
+  /// No description provided for @promoCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Promo code'**
+  String get promoCode;
+
+  /// No description provided for @promoCodePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter code'**
+  String get promoCodePlaceholder;
+
+  /// No description provided for @promoCodeApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get promoCodeApply;
+
+  /// No description provided for @promoCodeRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get promoCodeRemove;
+
+  /// No description provided for @promoCodeApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied'**
+  String get promoCodeApplied;
+
+  /// No description provided for @promoCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid promo code'**
+  String get promoCodeInvalid;
+
+  /// No description provided for @promoTypeSingleClass.
+  ///
+  /// In en, this message translates to:
+  /// **'One class'**
+  String get promoTypeSingleClass;
+
+  /// No description provided for @promoTypeAllClasses.
+  ///
+  /// In en, this message translates to:
+  /// **'All classes'**
+  String get promoTypeAllClasses;
 
   /// No description provided for @purchaseSpectatorTickets.
   ///

@@ -1,17 +1,32 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import '../data/waiver_2026.dart';
 
-/// Builds a single PDF document containing the 2026 waiver text with initials,
-/// plus date, full legal name, and signature image.
+/// Strips HTML tags and decodes common entities to plain text.
+String stripHtmlToPlainText(String html) {
+  if (html.isEmpty) return '';
+  String text = html
+      .replaceAll(RegExp(r'<[^>]*>'), ' ')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'");
+  // Collapse multiple spaces/newlines to single newline where appropriate
+  text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return text;
+}
+
+/// Builds a single PDF document containing the waiver body (from HTML content)
+/// plus a final page with date, full legal name, and signature image.
 ///
-/// [initials] — list of 8 initial strings (one per [initial] in the waiver).
+/// [htmlContent] — waiver body HTML from config (will be stripped to plain text for PDF).
 /// [signaturePngBytes] — PNG image bytes of the signature.
 /// [signedDate] — date of signature.
 /// [fullLegalName] — signer's full legal name.
 Future<Uint8List> buildWaiverPdf({
-  required List<String> initials,
+  required String htmlContent,
   required List<int> signaturePngBytes,
   required DateTime signedDate,
   required String fullLegalName,
@@ -20,21 +35,17 @@ Future<Uint8List> buildWaiverPdf({
   final dateStr =
       '${signedDate.year}-${signedDate.month.toString().padLeft(2, '0')}-${signedDate.day.toString().padLeft(2, '0')}';
 
-  // Build full body text with initials in place
-  final buffer = StringBuffer();
-  var initialIndex = 0;
-  for (final segment in waiver2026Segments) {
-    buffer.writeln(segment.text);
-    if (segment.needsInitial && initialIndex < initials.length) {
-      buffer.writeln('[${initials[initialIndex].trim().isEmpty ? "___" : initials[initialIndex]}]');
-      initialIndex++;
-    }
+  var fullText = stripHtmlToPlainText(htmlContent);
+  if (fullText.isEmpty) {
+    fullText = 'Waiver content.';
   }
-
-  final fullText = buffer.toString();
+  // Replace [initial], [date], [signature] placeholders so PDF is readable
+  fullText = fullText
+      .replaceAll(RegExp(r'\[initial\]', caseSensitive: false), '__________')
+      .replaceAll(RegExp(r'\[date\]', caseSensitive: false), dateStr)
+      .replaceAll(RegExp(r'\[signature\]', caseSensitive: false), '(signed below)');
 
   // Split into chunks that fit on one page (~1200 chars at line breaks).
-  // A single huge Text widget exceeds page height; multiple small widgets let MultiPage paginate.
   const int charsPerChunk = 1200;
   final List<pw.Widget> textWidgets = [];
   int start = 0;

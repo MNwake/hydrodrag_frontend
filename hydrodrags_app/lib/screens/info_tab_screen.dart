@@ -173,51 +173,124 @@ class _InfoTabScreenState extends State<InfoTabScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
-    final title = _config?.companyName.isNotEmpty == true
-        ? _config!.companyName
-        : l10n.eventTitle2026;
-    final tagline = _config?.taglineForLocale(locale) ??
-        _config?.tagline ??
-        l10n.itsTimeToSendIt;
+    final title = (_config?.headline != null && _config!.headline!.isNotEmpty)
+        ? _config!.headline!
+        : (_config?.companyName.isNotEmpty == true
+            ? _config!.companyName
+            : l10n.eventTitle2026);
+    final tagline = _config?.taglineForLocale(locale) ?? _config?.tagline;
+
+    final logoUrl = _config?.logoUrl != null && _config!.logoUrl!.isNotEmpty
+        ? ImageCacheService.getImageUrl(_config!.logoUrl)
+        : null;
+    final bannerUrl = _config?.bannerUrl != null && _config!.bannerUrl!.isNotEmpty
+        ? ImageCacheService.getImageUrl(_config!.bannerUrl)
+        : null;
+
+    final gradientDecoration = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          theme.colorScheme.primary,
+          theme.colorScheme.primaryContainer,
+        ],
+      ),
+    );
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primaryContainer,
-          ],
-        ),
-      ),
-      child: Column(
+      padding: bannerUrl == null ? const EdgeInsets.all(24) : EdgeInsets.zero,
+      decoration: bannerUrl == null ? gradientDecoration : null,
+      child: Stack(
         children: [
-          Image.asset(
-            'assets/images/logo.png',
-            height: 120,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.bold,
+          if (bannerUrl != null)
+            Positioned.fill(
+              child: Image.network(
+                bannerUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.expand(),
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tagline,
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onPrimary,
+          if (bannerUrl != null)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.35),
+                      Colors.black.withValues(alpha: 0.5),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Padding(
+            padding: bannerUrl != null
+                ? const EdgeInsets.fromLTRB(24, 24, 24, 24)
+                : EdgeInsets.zero,
+            child: Column(
+              children: [
+                _buildHeroLogo(context, logoUrl),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (tagline != null && tagline.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    tagline,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeroLogo(BuildContext context, String? logoUrl) {
+    if (logoUrl != null) {
+      return Image.network(
+        logoUrl,
+        height: 120,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/logo.png',
+          height: 120,
+          fit: BoxFit.contain,
+        ),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return SizedBox(
+            height: 120,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes!)
+                    : null,
+              ),
+            ),
+          );
+        },
+      );
+    }
+    return Image.asset(
+      'assets/images/logo.png',
+      height: 120,
+      fit: BoxFit.contain,
     );
   }
 

@@ -3,6 +3,7 @@
 	import {
 		fetchHydroDragsConfig,
 		updateHydroDragsConfig,
+		updateWaiver,
 		addSponsor,
 		updateSponsor,
 		deleteSponsor,
@@ -22,8 +23,11 @@
 		type HydroDragsConfigUpdate,
 		type Sponsor,
 		type SocialLink,
-		type NewsItem
+		type NewsItem,
+		type PromoCode,
+		type WaiverUpdate
 	} from '$lib/api/hydrodrags';
+	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import { toast } from '$lib/stores/toast';
 
 	let loading = true;
@@ -48,6 +52,7 @@
 	let spectatorWeekendPrice = 35;
 
 	let socialLinks: (SocialLink & { _id: string })[] = [];
+	let promoCodes: PromoCode[] = [];
 
 	// Sponsor add form
 	let showAddSponsor = false;
@@ -79,13 +84,24 @@
 	let newNewsActive = true;
 	let addNewsPending = false;
 
+	// Waiver form state (saved via updateWaiver; content is HTML)
+	let waiverTitle = '';
+	let waiverVersion = '';
+	let waiverEffectiveDate = ''; // YYYY-MM-DD for date input
+	let waiverContent = '';
+	let waiverActive = true;
+	let waiverSaving = false;
+	let waiverEditorRef: { getHtml(): string } | null = null;
+
 	// Collapsible sections (default collapsed)
-	type SectionKey = 'about' | 'pricing' | 'contact' | 'news' | 'sponsors' | 'mediaPartners' | 'socialLinks';
+	type SectionKey = 'about' | 'pricing' | 'contact' | 'waiver' | 'news' | 'promoCodes' | 'sponsors' | 'mediaPartners' | 'socialLinks';
 	let openSections: Record<SectionKey, boolean> = {
 		about: false,
 		pricing: false,
 		contact: false,
+		waiver: false,
 		news: false,
+		promoCodes: false,
 		sponsors: false,
 		mediaPartners: false,
 		socialLinks: false
@@ -112,6 +128,23 @@
 			...l,
 			_id: crypto.randomUUID()
 		}));
+		promoCodes = (c.promo_codes ?? []).map((p) => ({ ...p }));
+		const w = c.waiver;
+		if (w) {
+			waiverTitle = w.title ?? '';
+			waiverVersion = w.version ?? '';
+			waiverEffectiveDate = w.effective_date
+				? (w.effective_date.slice(0, 10) as string) // YYYY-MM-DD from ISO
+				: '';
+			waiverContent = w.content ?? '';
+			waiverActive = w.is_active ?? true;
+		} else {
+			waiverTitle = '';
+			waiverVersion = '';
+			waiverEffectiveDate = '';
+			waiverContent = '';
+			waiverActive = true;
+		}
 	}
 
 	async function load() {
@@ -126,7 +159,15 @@
 		}
 		config = res.data ?? null;
 		if (config) mapConfigToForm(config);
-		else socialLinks = [];
+		else {
+			socialLinks = [];
+			promoCodes = [];
+			waiverTitle = '';
+			waiverVersion = '';
+			waiverEffectiveDate = '';
+			waiverContent = '';
+			waiverActive = true;
+		}
 		sponsorLogoReplacement = new Map();
 		mediaPartnerLogoReplacement = new Map();
 	}
@@ -145,6 +186,7 @@
 			ihra_membership_price: ihraMembershipPrice,
 			spectator_single_day_price: spectatorSingleDayPrice,
 			spectator_weekend_price: spectatorWeekendPrice,
+			promo_codes: promoCodes.length ? promoCodes : undefined,
 			is_active: true
 		};
 	}
@@ -160,6 +202,27 @@
 			await load();
 		} else {
 			error = res.error ?? 'Save failed';
+		}
+	}
+
+	async function saveWaiver() {
+		waiverSaving = true;
+		error = null;
+		const html = waiverEditorRef?.getHtml() ?? waiverContent;
+		const payload: WaiverUpdate = {
+			title: waiverTitle || undefined,
+			version: waiverVersion || undefined,
+			effective_date: waiverEffectiveDate ? `${waiverEffectiveDate}T00:00:00Z` : undefined,
+			content: html || undefined,
+			is_active: waiverActive
+		};
+		const res = await updateWaiver(payload);
+		waiverSaving = false;
+		if (res.ok) {
+			toast('Waiver saved', 'success');
+			await load();
+		} else {
+			error = res.error ?? 'Failed to save waiver';
 		}
 	}
 
@@ -688,6 +751,79 @@
 			</div>
 		</div>
 
+		<!-- Waiver -->
+		<div class="collapse-card form-card">
+			<button type="button" class="collapse-header" on:click={() => toggleSection('waiver')} aria-expanded={openSections.waiver}>
+				<span class="collapse-title">Waiver</span>
+				<span class="collapse-icon" aria-hidden="true">{openSections.waiver ? '▼' : '▶'}</span>
+			</button>
+			<div class="collapse-body" class:open={openSections.waiver}>
+				<div class="collapse-inner">
+					<p class="form-hint">Use the toolbar for bold, italic, underline, lists, headings, and links. Content is saved as HTML automatically.</p>
+					<div class="form-row form-row--waiver-meta">
+						<div class="form-group">
+							<label for="waiver-title">Title</label>
+							<input id="waiver-title" type="text" bind:value={waiverTitle} placeholder="e.g. Release of Liability" />
+						</div>
+						<div class="form-group">
+							<label for="waiver-version">Version</label>
+							<input id="waiver-version" type="text" bind:value={waiverVersion} placeholder="e.g. 2026.1" />
+						</div>
+						<div class="form-group">
+							<label for="waiver-effective-date">Effective date</label>
+							<input id="waiver-effective-date" type="date" bind:value={waiverEffectiveDate} />
+						</div>
+						<div class="form-group form-group--checkbox">
+							<label>
+								<input type="checkbox" bind:checked={waiverActive} />
+								Waiver active
+							</label>
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="waiver-content">Content</label>
+						{#if openSections.waiver}
+							<RichTextEditor id="waiver-content" content={waiverContent} bind:this={waiverEditorRef} />
+						{/if}
+					</div>
+					<div class="form-actions form-actions--inline">
+						<button type="button" class="btn btn-primary" disabled={waiverSaving} on:click={saveWaiver}>
+							{waiverSaving ? 'Saving…' : 'Save waiver'}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Promo codes -->
+		<div class="collapse-card form-card">
+			<button type="button" class="collapse-header" on:click={() => toggleSection('promoCodes')} aria-expanded={openSections.promoCodes}>
+				<span class="collapse-title">Promo codes</span>
+				<span class="collapse-icon" aria-hidden="true">{openSections.promoCodes ? '▼' : '▶'}</span>
+			</button>
+			<div class="collapse-body" class:open={openSections.promoCodes}>
+				<div class="collapse-inner">
+					<p class="form-hint">Toggle Active to enable or disable each promo code. Changes are saved when you click &quot;Save changes&quot; below.</p>
+					{#if promoCodes.length}
+						<ul class="promo-code-list">
+							{#each promoCodes as promo}
+								<li class="promo-code-item">
+									<span class="promo-code-code">{promo.code}</span>
+									<span class="promo-code-type">{promo.type === 'all_classes' ? 'All classes' : 'Single class'}</span>
+									<label class="promo-code-active">
+										<input type="checkbox" bind:checked={promo.is_active} />
+										Active
+									</label>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="form-hint">No promo codes configured.</p>
+					{/if}
+				</div>
+			</div>
+		</div>
+
 		<!-- News -->
 		<div class="collapse-card form-card">
 			<button type="button" class="collapse-header" on:click={() => toggleSection('news')} aria-expanded={openSections.news}>
@@ -1139,6 +1275,22 @@
 		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 		gap: 1rem;
 	}
+	.form-row--waiver-meta {
+		display: grid;
+		grid-template-columns: 1fr auto auto auto;
+		gap: 1rem;
+		align-items: end;
+		margin-bottom: 1rem;
+	}
+	@media (max-width: 720px) {
+		.form-row--waiver-meta {
+			grid-template-columns: 1fr;
+		}
+	}
+	.form-actions--inline {
+		margin-top: 0.5rem;
+		margin-bottom: 0;
+	}
 	.form-hint {
 		margin: 0 0 0.75rem 0;
 		color: var(--text-muted);
@@ -1222,6 +1374,36 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+	.promo-code-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.promo-code-item {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.75rem;
+		background: var(--bg-muted);
+		border-radius: var(--radius);
+		margin-bottom: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.promo-code-code {
+		font-weight: 600;
+		font-family: ui-monospace, monospace;
+		min-width: 6rem;
+	}
+	.promo-code-type {
+		color: var(--text-muted);
+		font-size: 0.9rem;
+	}
+	.promo-code-active {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-left: auto;
 	}
 	.form-actions {
 		margin-top: 1rem;

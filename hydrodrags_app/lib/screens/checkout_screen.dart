@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_state_service.dart';
@@ -22,6 +23,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _orderId;
   bool _isCreatingOrder = false;
   bool _isCapturing = false;
+  final TextEditingController _promoCodeController = TextEditingController();
+  String? _appliedPromoCode;
+  String? _appliedPromoType; // "single_class" | "all_classes"
+  bool _isVerifyingPromo = false;
+  String? _promoError;
+
+  @override
+  void dispose() {
+    _promoCodeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _payWithPayPal() async {
     if (kDebugMode) {
@@ -45,7 +57,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final checkoutService = CheckoutService(authService);
-      final result = await checkoutService.createPayPalOrder(event.id, registration);
+      final result = await checkoutService.createPayPalOrder(
+        event.id,
+        registration,
+        promoCode: _appliedPromoCode,
+      );
 
       if (!mounted) return;
       setState(() => _isCreatingOrder = false);
@@ -162,13 +178,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 12),
               if (registration != null && event != null) ...[
                 ..._buildRegistrationSummary(context, event, registration, l10n),
+                if (_appliedPromoCode != null &&
+                    _effectivePromoDiscount(event, registration) > 0)
+                  _buildSummaryRow(
+                    context,
+                    'Promo (${_appliedPromoCode!})',
+                    '-\$${_effectivePromoDiscount(event, registration).toStringAsFixed(2)}',
+                  ),
                 const Divider(height: 24),
                 _buildSummaryRow(
                   context,
                   l10n.total ?? 'Total',
-                  '\$${_computeTotal(event, registration).toStringAsFixed(2)}',
+                  '\$${_displayTotal(event, registration).toStringAsFixed(2)}',
                 ),
               ],
+              const SizedBox(height: 20),
+              _buildPromoCodeSection(context, theme, l10n),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -245,8 +270,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return null;
   }
 
-  /// Registration cost from event class price(s). Spectator: $30 single day, $40 weekend.
-  double _computeTotal(Event event, EventRegistration registration) {
+  /// Subtotal from classes, spectator passes, membership. Used for order summary.
+  double _computeSubtotal(Event event, EventRegistration registration) {
     double total = 0;
     for (final entry in registration.classEntries) {
       final eventClass = _eventClassFor(event, entry.classKey);
@@ -256,6 +281,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     total += registration.spectatorWeekendPasses * _spectatorWeekendPrice;
     if (registration.purchaseIhraMembership) total += _ihraMembershipPrice;
     return total;
+  }
+
+  /// Sum of class registration costs only (no spectators, no membership).
+  double _classesSubtotal(Event event, EventRegistration registration) {
+    double total = 0;
+    for (final entry in registration.classEntries) {
+      final eventClass = _eventClassFor(event, entry.classKey);
+      if (eventClass != null) total += eventClass.price;
+    }
+    return total;
+  }
+
+  /// Promo discount for UI: single_class = cost of one registered class, all_classes = all class costs.
+  double _effectivePromoDiscount(Event event, EventRegistration registration) {
+    if (_appliedPromoCode == null || _appliedPromoType == null) return 0.0;
+    switch (_appliedPromoType!) {
+      case 'single_class':
+        // Remove cost of one class (first registered class)
+        for (final entry in registration.classEntries) {
+          final eventClass = _eventClassFor(event, entry.classKey);
+          if (eventClass != null) return eventClass.price;
+        }
+        return 0.0;
+      case 'all_classes':
+        return _classesSubtotal(event, registration);
+      default:
+        return 0.0;
+    }
+  }
+
+  /// Total shown in UI: subtotal minus promo discount. PayPal order still uses full details on server.
+  double _displayTotal(Event event, EventRegistration registration) {
+    final subtotal = _computeSubtotal(event, registration);
+    return subtotal - _effectivePromoDiscount(event, registration);
   }
 
   List<Widget> _buildRegistrationSummary(
@@ -297,6 +356,173 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ));
     }
     return list;
+  }
+
+  Widget _buildPromoCodeSection(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final hasAppliedCode = _appliedPromoCode != null && _appliedPromoCode!.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.promoCode,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (hasAppliedCode)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.local_offer_outlined, size: 20, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _appliedPromoCode!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_appliedPromoType != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _promoTypeLabel(l10n, _appliedPromoType!),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _appliedPromoCode = null;
+                      _appliedPromoType = null;
+                      _promoError = null;
+                      _promoCodeController.clear();
+                    });
+                  },
+                  child: Text(l10n.promoCodeRemove),
+                ),
+              ],
+            ),
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _promoCodeController,
+                  decoration: InputDecoration(
+                    hintText: l10n.promoCodePlaceholder,
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    TextInputFormatter.withFunction((oldValue, newValue) {
+                      return TextEditingValue(
+                        text: newValue.text.toUpperCase(),
+                        selection: newValue.selection,
+                      );
+                    }),
+                  ],
+                  onSubmitted: (_) => _applyPromoCode(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: _isVerifyingPromo ? null : _applyPromoCode,
+                child: _isVerifyingPromo
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.promoCodeApply),
+              ),
+            ],
+          ),
+        if (_promoError != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _promoError!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _promoTypeLabel(AppLocalizations l10n, String type) {
+    switch (type) {
+      case 'single_class':
+        return l10n.promoTypeSingleClass;
+      case 'all_classes':
+        return l10n.promoTypeAllClasses;
+      default:
+        return type;
+    }
+  }
+
+  Future<void> _applyPromoCode() async {
+    final code = _promoCodeController.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+
+    setState(() {
+      _isVerifyingPromo = true;
+      _promoError = null;
+    });
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final checkoutService = CheckoutService(authService);
+      final result = await checkoutService.verifyPromoCode(code);
+
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      setState(() {
+        _isVerifyingPromo = false;
+        if (result.valid) {
+          _appliedPromoCode = result.code ?? code;
+          _appliedPromoType = result.type;
+          _promoError = null;
+        } else {
+          _appliedPromoCode = null;
+          _appliedPromoType = null;
+          _promoError = l10n.promoCodeInvalid;
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Checkout] Verify promo error: $e');
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      setState(() {
+        _isVerifyingPromo = false;
+        _promoError = l10n.promoCodeInvalid;
+      });
+      ErrorHandlerService.logError(e, context: 'Verify Promo');
+    }
   }
 
   Widget _buildSummaryRow(BuildContext context, String label, String value) {

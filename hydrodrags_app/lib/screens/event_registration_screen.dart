@@ -137,6 +137,17 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     }
   }
 
+  /// True if user has a valid waiver (backend or in-app) and should skip the waiver step.
+  bool _shouldSkipWaiver() {
+    final appState = Provider.of<AppStateService>(context, listen: false);
+    final profile = appState.racerProfile;
+    final waiver = appState.waiverSignature;
+    final currentYear = DateTime.now().year;
+    final inAppWaiverValid = waiver != null && waiver.signedAt.year == currentYear;
+    final backendHasValidWaiver = profile?.hasValidWaiver == true;
+    return inAppWaiverValid || backendHasValidWaiver;
+  }
+
   /// Valid IHRA = membership number present and purchased within current calendar year.
   bool _hasValidIhra(BuildContext context) {
     final profile = Provider.of<AppStateService>(context, listen: false).racerProfile;
@@ -207,18 +218,13 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     final appState = Provider.of<AppStateService>(context, listen: false);
     appState.setEventRegistration(registration);
 
-    final profile = appState.racerProfile;
-    final waiver = appState.waiverSignature;
-    final currentYear = DateTime.now().year;
-    final inAppWaiverValid = waiver != null && waiver.signedAt.year == currentYear;
-    final backendHasValidWaiver = profile?.hasValidWaiver == true;
-    final skipWaiver = inAppWaiverValid || backendHasValidWaiver;
-
     if (kDebugMode) {
-      print('[EventRegistration] Waiver check: racer.hasValidWaiver=${profile?.hasValidWaiver}, racer.waiverSignedAt=${profile?.waiverSignedAt}, appState.waiverSignature=${waiver != null ? "signed ${waiver.signedAt}" : "null"}, skipWaiver=$skipWaiver');
+      final profile = appState.racerProfile;
+      final waiver = appState.waiverSignature;
+      print('[EventRegistration] Waiver check: racer.hasValidWaiver=${profile?.hasValidWaiver}, racer.waiverSignedAt=${profile?.waiverSignedAt}, appState.waiverSignature=${waiver != null ? "signed ${waiver.signedAt}" : "null"}, skipWaiver=${_shouldSkipWaiver()}');
     }
 
-    if (skipWaiver) {
+    if (_shouldSkipWaiver()) {
       setState(() => _currentStep = 2);
       return;
     }
@@ -713,7 +719,13 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
             if (_currentStep > 0)
               OutlinedButton(
                 onPressed: () {
-                  setState(() => _currentStep--);
+                  final nextStep = _currentStep - 1;
+                  // From day passes (2) going back: skip waiver step (1) if user already has valid waiver
+                  if (nextStep == 1 && _shouldSkipWaiver()) {
+                    setState(() => _currentStep = 0);
+                  } else {
+                    setState(() => _currentStep = nextStep);
+                  }
                 },
                 child: Text(l10n.previous),
               ),

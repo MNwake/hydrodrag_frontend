@@ -52,6 +52,33 @@ class SpanishContent {
   }
 }
 
+/// Waiver from config (GET /hydrodrags/config)
+class WaiverConfig {
+  final String title;
+  final String? version;
+  final String? effectiveDate;
+  final String content;
+  final bool isActive;
+
+  WaiverConfig({
+    required this.title,
+    this.version,
+    this.effectiveDate,
+    required this.content,
+    this.isActive = true,
+  });
+
+  factory WaiverConfig.fromJson(Map<String, dynamic> json) {
+    return WaiverConfig(
+      title: json['title'] as String? ?? 'Release of Liability',
+      version: json['version'] as String?,
+      effectiveDate: json['effective_date'] as String?,
+      content: json['content'] as String? ?? '',
+      isActive: json['is_active'] as bool? ?? true,
+    );
+  }
+}
+
 /// News item for the info tab
 class NewsItem {
   final String title;
@@ -79,6 +106,12 @@ class NewsItem {
 /// Root config for the HydroDrags info tab (from GET /hydrodrags/config)
 class HydroDragsConfig {
   final String companyName;
+  /// Main headline for the info page hero (e.g. "2025 Fueltech US Nationals World Championships").
+  final String? headline;
+  /// URL or path for the logo image (e.g. "/assets/logo.png"). Resolve with API base URL.
+  final String? logoUrl;
+  /// URL or path for the banner image (e.g. "/assets/banner.png"). Resolve with API base URL.
+  final String? bannerUrl;
   final String? about;
   final String? tagline;
   final SpanishContent? es;
@@ -93,10 +126,14 @@ class HydroDragsConfig {
   final List<Sponsor> sponsors;
   final List<Sponsor> mediaPartners;
   final List<SocialLink> socialLinks;
+  final WaiverConfig? waiver;
   final bool isActive;
 
   HydroDragsConfig({
     required this.companyName,
+    this.headline,
+    this.logoUrl,
+    this.bannerUrl,
     this.about,
     this.tagline,
     this.es,
@@ -111,12 +148,16 @@ class HydroDragsConfig {
     this.sponsors = const [],
     this.mediaPartners = const [],
     this.socialLinks = const [],
+    this.waiver,
     this.isActive = true,
   });
 
   factory HydroDragsConfig.fromJson(Map<String, dynamic> json) {
     return HydroDragsConfig(
       companyName: json['company_name'] as String? ?? '',
+      headline: json['headline'] as String?,
+      logoUrl: json['logo_url'] as String?,
+      bannerUrl: json['banner_url'] as String?,
       about: json['about'] as String?,
       tagline: json['tagline'] as String?,
       es: json['es'] != null
@@ -148,6 +189,9 @@ class HydroDragsConfig {
               ?.map((e) => SocialLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      waiver: json['waiver'] != null
+          ? WaiverConfig.fromJson(json['waiver'] as Map<String, dynamic>)
+          : null,
       isActive: json['is_active'] as bool? ?? true,
     );
   }

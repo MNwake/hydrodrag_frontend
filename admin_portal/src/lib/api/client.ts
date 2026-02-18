@@ -6,7 +6,7 @@
 const DEBUG_API =
 	import.meta.env.VITE_DEBUG_API === 'true' || import.meta.env.DEV;
 
-function getApiBase(): string {
+export function getApiBase(): string {
 	const base = import.meta.env.VITE_API_BASE_URL;
 	if (!base || typeof base !== 'string') {
 		throw new Error('VITE_API_BASE_URL is not set');
@@ -131,6 +131,33 @@ export async function apiFetch<T = unknown>(
 
 export async function apiGet<T = unknown>(path: string): Promise<ApiResponse<T>> {
 	return apiFetch<T>(path, { method: 'GET' });
+}
+
+/** GET request that returns the response as a Blob (e.g. for PDF download). */
+export async function apiGetBlob(path: string): Promise<ApiResponse<Blob>> {
+	const base = getApiBase();
+	const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+	const headers = new Headers();
+	const adminKey = getAdminApiKey();
+	if (adminKey) headers.set('X-Admin-Key', adminKey);
+	let res: Response;
+	try {
+		res = await fetch(url, { method: 'GET', headers });
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		return { ok: false, status: 0, data: null, error: msg };
+	}
+	if (!res.ok) {
+		const text = await res.text();
+		return {
+			ok: false,
+			status: res.status,
+			data: null,
+			error: text || res.statusText || 'Request failed'
+		};
+	}
+	const data = await res.blob();
+	return { ok: true, status: res.status, data, error: null };
 }
 
 export async function apiPost<T = unknown>(path: string, body: Record<string, unknown>): Promise<ApiResponse<T>> {
