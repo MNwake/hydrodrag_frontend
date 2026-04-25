@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { fetchRacers, type RacerRow } from '$lib/api/resources';
+	import Modal from '$lib/components/Modal.svelte';
+	import { toast } from '$lib/stores/toast';
+	import { createRacer, fetchRacers, type RacerCreatePayload, type RacerRow } from '$lib/api/resources';
 
 	type SortKey = 'name' | 'phone' | 'membership_number' | 'waiver_signed_at' | 'is_of_age' | 'has_ihra_membership';
 	type SortDir = 'asc' | 'desc';
@@ -21,6 +23,106 @@
 	let searchQuery = '';
 	let sortKey: SortKey = 'name';
 	let sortDir: SortDir = 'asc';
+
+	let showCreateModal = false;
+	let creatingRacer = false;
+
+	let createForm = {
+		email: '',
+		first_name: '',
+		last_name: '',
+		date_of_birth: '',
+		gender: '',
+		nationality: '',
+		phone: '',
+		emergency_contact_name: '',
+		emergency_contact_phone: '',
+		street: '',
+		city: '',
+		state_province: '',
+		country: '',
+		zip_postal_code: '',
+		membership_number: '',
+		bio: ''
+	};
+
+	function toOptionalString(v: string) {
+		const t = v.trim();
+		return t ? t : undefined;
+	}
+
+	function buildCreatePayload(): RacerCreatePayload {
+		const payload: RacerCreatePayload = {
+			email: createForm.email.trim(),
+			first_name: toOptionalString(createForm.first_name),
+			last_name: toOptionalString(createForm.last_name),
+			date_of_birth: createForm.date_of_birth.trim() ? createForm.date_of_birth.trim() : undefined,
+			gender: toOptionalString(createForm.gender),
+			nationality: toOptionalString(createForm.nationality),
+			phone: toOptionalString(createForm.phone),
+			emergency_contact_name: toOptionalString(createForm.emergency_contact_name),
+			emergency_contact_phone: toOptionalString(createForm.emergency_contact_phone),
+			street: toOptionalString(createForm.street),
+			city: toOptionalString(createForm.city),
+			state_province: toOptionalString(createForm.state_province),
+			country: toOptionalString(createForm.country),
+			zip_postal_code: toOptionalString(createForm.zip_postal_code),
+			membership_number: toOptionalString(createForm.membership_number),
+			bio: toOptionalString(createForm.bio)
+		};
+		return payload;
+	}
+
+	async function handleCreateRacer() {
+		if (creatingRacer) return;
+
+		const email = createForm.email.trim();
+		const firstName = createForm.first_name.trim();
+		const lastName = createForm.last_name.trim();
+
+		if (!email) {
+			toast('Email is required', 'error');
+			return;
+		}
+		if (!firstName || !lastName) {
+			toast('First and last name are required', 'error');
+			return;
+		}
+
+		creatingRacer = true;
+		const payload = buildCreatePayload();
+		const res = await createRacer(payload);
+		creatingRacer = false;
+
+		if (res.ok && res.data) {
+			toast('Racer created', 'success');
+			showCreateModal = false;
+			const newId = res.data.id;
+			// Reset form so the next create starts clean.
+			createForm = {
+				email: '',
+				first_name: '',
+				last_name: '',
+				date_of_birth: '',
+				gender: '',
+				nationality: '',
+				phone: '',
+				emergency_contact_name: '',
+				emergency_contact_phone: '',
+				street: '',
+				city: '',
+				state_province: '',
+				country: '',
+				zip_postal_code: '',
+				membership_number: '',
+				bio: ''
+			};
+			await goto(`/racers/${newId}`);
+			return;
+		}
+
+		toast(res.error ?? 'Failed to create racer', 'error');
+	}
 
 	function fullName(r: RacerRow): string {
 		const full = (r.full_name ?? '').toString().trim();
@@ -115,8 +217,20 @@
 </script>
 
 <div class="page-header">
-	<h1 class="page-title">Racers</h1>
-	<p class="page-subtitle">All registered racers</p>
+	<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+		<div>
+			<h1 class="page-title">Racers</h1>
+			<p class="page-subtitle">All registered racers</p>
+		</div>
+		<button
+			type="button"
+			class="btn btn-primary"
+			on:click={() => (showCreateModal = true)}
+			disabled={creatingRacer || loading}
+		>
+			{creatingRacer ? 'Creating…' : '+ Create racer'}
+		</button>
+	</div>
 </div>
 
 {#if loading}
@@ -195,7 +309,155 @@
 	</div>
 {/if}
 
+<Modal bind:open={showCreateModal} title="Create racer">
+	<form id="create-racer-form" on:submit|preventDefault={handleCreateRacer}>
+		<div class="form-card" style="margin-bottom: 0;">
+			<div class="form-section">
+				<h2 class="form-section-title">Identity</h2>
+				<div class="form-grid">
+					<div class="form-group" style="grid-column: span 2;">
+						<label for="create-racer-email">Email <span class="label-required" aria-hidden="true">*</span></label>
+						<input
+							id="create-racer-email"
+							type="email"
+							bind:value={createForm.email}
+							autocomplete="off"
+							spellcheck="false"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="create-racer-first-name">First name <span class="label-required" aria-hidden="true">*</span></label>
+						<input id="create-racer-first-name" type="text" bind:value={createForm.first_name} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-last-name">Last name <span class="label-required" aria-hidden="true">*</span></label>
+						<input id="create-racer-last-name" type="text" bind:value={createForm.last_name} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-dob">Date of birth</label>
+						<input id="create-racer-dob" type="date" bind:value={createForm.date_of_birth} />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-phone">Phone</label>
+						<input id="create-racer-phone" type="text" bind:value={createForm.phone} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-gender">Gender</label>
+						<input id="create-racer-gender" type="text" bind:value={createForm.gender} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-nationality">Nationality</label>
+						<input
+							id="create-racer-nationality"
+							type="text"
+							bind:value={createForm.nationality}
+							autocomplete="off"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="create-racer-membership-number">Membership number</label>
+						<input
+							id="create-racer-membership-number"
+							type="text"
+							bind:value={createForm.membership_number}
+							autocomplete="off"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section">
+				<h2 class="form-section-title">Emergency contact</h2>
+				<div class="form-grid">
+					<div class="form-group">
+						<label for="create-racer-emergency-contact-name">Name</label>
+						<input
+							id="create-racer-emergency-contact-name"
+							type="text"
+							bind:value={createForm.emergency_contact_name}
+							autocomplete="off"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="create-racer-emergency-contact-phone">Phone</label>
+						<input
+							id="create-racer-emergency-contact-phone"
+							type="text"
+							bind:value={createForm.emergency_contact_phone}
+							autocomplete="off"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section">
+				<h2 class="form-section-title">Address</h2>
+				<div class="form-grid">
+					<div class="form-group" style="grid-column: span 2;">
+						<label for="create-racer-street">Street</label>
+						<input id="create-racer-street" type="text" bind:value={createForm.street} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-city">City</label>
+						<input id="create-racer-city" type="text" bind:value={createForm.city} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-state-province">State / Province</label>
+						<input
+							id="create-racer-state-province"
+							type="text"
+							bind:value={createForm.state_province}
+							autocomplete="off"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="create-racer-country">Country</label>
+						<input id="create-racer-country" type="text" bind:value={createForm.country} autocomplete="off" />
+					</div>
+					<div class="form-group">
+						<label for="create-racer-zip-postal-code">ZIP / Postal</label>
+						<input
+							id="create-racer-zip-postal-code"
+							type="text"
+							bind:value={createForm.zip_postal_code}
+							autocomplete="off"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section">
+				<h2 class="form-section-title">Notes</h2>
+				<div class="form-grid">
+					<div class="form-group" style="grid-column: span 2;">
+						<label for="create-racer-bio">Bio</label>
+						<textarea
+							id="create-racer-bio"
+							bind:value={createForm.bio}
+							placeholder="Optional notes about the racer"
+						></textarea>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-actions">
+				<button type="button" class="btn btn-secondary" on:click={() => (showCreateModal = false)} disabled={creatingRacer}>
+					Cancel
+				</button>
+				<button type="submit" class="btn btn-primary" disabled={creatingRacer}>
+					{creatingRacer ? 'Creating…' : 'Create'}
+				</button>
+			</div>
+		</div>
+	</form>
+</Modal>
+
 <style>
+	.label-required {
+		color: var(--error);
+		font-weight: 600;
+	}
+
 	.racers-toolbar {
 		margin-bottom: 1rem;
 	}

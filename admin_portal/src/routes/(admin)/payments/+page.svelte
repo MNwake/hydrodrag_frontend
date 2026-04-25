@@ -8,7 +8,7 @@
 	let transactions: PayPalCheckoutRead[] = [];
 	let events: { id: string; name: string }[] = [];
 	let filterEventId = '';
-	let filterCaptured: '' | 'true' | 'false' = '';
+	let filterCaptured: '' | 'true' | 'false' = 'true';
 
 	async function loadEvents() {
 		const res = await fetchEvents(1, 200);

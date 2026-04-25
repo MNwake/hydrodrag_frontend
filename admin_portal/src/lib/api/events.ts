@@ -203,6 +203,41 @@ export async function fetchEvents(
 	return apiGet<EventListResponse>(`${base()}${q}`);
 }
 
+/** All events (admin list), paginated until complete. For dropdowns. */
+export async function fetchAllEventsForAdmin(): Promise<ApiResponse<EventBase[]>> {
+	try {
+		const allEvents: EventBase[] = [];
+		let page = 1;
+		let hasMore = true;
+
+		while (hasMore) {
+			const res = await fetchEvents(page, MAX_PAGE_SIZE);
+			if (!res.ok) {
+				return {
+					ok: false,
+					status: res.status,
+					data: null,
+					error: res.error ?? 'Failed to fetch events'
+				};
+			}
+			const events = res.data?.events ?? [];
+			allEvents.push(...events);
+			const total = res.data?.total ?? 0;
+			hasMore = allEvents.length < total;
+			page++;
+		}
+
+		return { ok: true, status: 200, data: allEvents, error: null };
+	} catch (err) {
+		return {
+			ok: false,
+			status: 500,
+			data: null,
+			error: err instanceof Error ? err.message : 'Unknown error fetching events'
+		};
+	}
+}
+
 export async function fetchEvent(id: string): Promise<ApiResponse<EventResponse>> {
 	return apiGet<EventResponse>(`${base()}/${id}`);
 }

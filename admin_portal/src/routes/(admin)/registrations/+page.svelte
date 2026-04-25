@@ -4,11 +4,19 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import {
 		fetchRegistrations,
+		fetchRacerPwcs,
 		type EventRegistrations,
 		type RegistrationRow,
+		type RacerPwcRow,
 		type RegistrationWithDetail
 	} from '$lib/api/resources';
-	import type { EventRegistrationAdmin } from '$lib/api/registrations';
+	import { fetchAllEventsForAdmin, type EventBase, type EventClass } from '$lib/api/events';
+	import {
+		updateRegistration,
+		type EventRegistrationAdmin,
+		type EventRegistrationAdminUpdate
+	} from '$lib/api/registrations';
+	import { toast } from '$lib/stores/toast';
 
 	type SortKey = 'racer_name' | 'class_name' | 'status' | 'amount' | 'registration_date';
 	type SortDir = 'asc' | 'desc';
@@ -21,6 +29,18 @@
 	let expandedEvents: Record<string, boolean> = {};
 	let selectedReg: EventRegistrationAdmin | null = null;
 	let showDetailModal = false;
+
+	// Admin edit state
+	let editing = false;
+	let editSaving = false;
+	let editIsPaid = false;
+
+	let allEditEvents: EventBase[] = [];
+	let racerPwcs: RacerPwcRow[] = [];
+	let editEventId = '';
+	let editClassKey = '';
+	let editPwcId = '';
+	let editFormLoading = false;
 
 	const columns: { key: SortKey; label: string; class?: 'num' | 'center'; sortable?: boolean }[] = [
 		{ key: 'racer_name', label: 'Racer', sortable: true },
@@ -91,7 +111,80 @@
 		if (reg) {
 			selectedReg = reg;
 			showDetailModal = true;
+			void loadRacerPwcsForDisplay(reg.racer.id);
 		}
+	}
+
+	async function loadRacerPwcsForDisplay(racerId: string) {
+		const res = await fetchRacerPwcs(racerId);
+		racerPwcs = res.ok && res.data ? res.data : [];
+	}
+
+	/** Pick a valid class_key for the given event (keeps current key when still valid). */
+	function syncClassKeyForEvent(eventId: string) {
+		const ev = allEditEvents.find((e) => e.id === eventId);
+		const classes = (ev?.classes ?? []).filter((c) => c.is_active);
+		if (classes.length && !classes.some((c) => c.key === editClassKey)) {
+			editClassKey = classes[0].key;
+		}
+	}
+
+	function onEditEventSelectChange(e: Event) {
+		const v = (e.currentTarget as HTMLSelectElement).value;
+		editEventId = v;
+		syncClassKeyForEvent(v);
+	}
+
+	async function beginEdit() {
+		if (!selectedReg) return;
+		editing = true;
+		editFormLoading = true;
+		editIsPaid = selectedReg.is_paid ?? false;
+		editEventId = selectedReg.event.id;
+		editClassKey = selectedReg.class_key;
+		editPwcId = selectedReg.pwc_identifier ?? '';
+
+		try {
+			const evRes = await fetchAllEventsForAdmin();
+			if (evRes.ok && evRes.data) {
+				allEditEvents = [...evRes.data].sort(
+					(a, b) =>
+						new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+				);
+			} else {
+				allEditEvents = [];
+				if (evRes.error) toast(evRes.error, 'error');
+			}
+
+			const pwcRes = await fetchRacerPwcs(selectedReg.racer.id);
+			if (pwcRes.ok && pwcRes.data) {
+				racerPwcs = pwcRes.data;
+			} else {
+				racerPwcs = [];
+				if (pwcRes.error) toast(pwcRes.error, 'error');
+			}
+
+			if (!allEditEvents.some((e) => e.id === editEventId)) {
+				toast('Current event not in admin list — pick another event.', 'error');
+			}
+
+			syncClassKeyForEvent(editEventId);
+
+			const opts = pwcSelectOptions(racerPwcs, editPwcId);
+			if (opts.length && !opts.some((o) => o.value === editPwcId)) {
+				editPwcId = opts[0].value;
+			}
+
+			if (opts.length === 0) {
+				toast('This racer has no PWCs on file — add one or save a PWC label after edit.', 'error');
+			}
+		} finally {
+			editFormLoading = false;
+		}
+	}
+
+	function cancelEdit() {
+		editing = false;
 	}
 
 	function racerDisplay(reg: EventRegistrationAdmin): string {
@@ -113,6 +206,105 @@
 	/** Backend sends price in dollars (e.g. 250 = $250). */
 	function formatPrice(dollars: number): string {
 		return `$${Number(dollars).toFixed(2)}`;
+	}
+
+	function formatShortDate(iso: string | undefined): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+
+	function looksLikeMongoId(s: string): boolean {
+		return /^[a-f\d]{24}$/i.test((s ?? '').trim());
+	}
+
+	type PwcOpt = { value: string; label: string };
+
+	function pwcSelectOptions(pwcs: RacerPwcRow[], currentValue: string): PwcOpt[] {
+		const out: PwcOpt[] = pwcs.map((p) => ({
+			value: p.id,
+			label: `${p.make} ${p.model}${p.is_primary ? ' (primary)' : ''}`
+		}));
+		const s = (currentValue ?? '').trim();
+		if (s && !out.some((o) => o.value === s)) {
+			out.unshift({ value: s, label: `${s} (on file)` });
+		}
+		return out;
+	}
+
+	function pwcLabel(pwcId: string | null | undefined): string {
+		if (!pwcId) return '—';
+		const id = pwcId.trim();
+		const byId = racerPwcs.find((x) => x.id === id);
+		if (byId) return `${byId.make} ${byId.model}${byId.is_primary ? ' (primary)' : ''}`;
+		const byCompose = racerPwcs.find(
+			(x) => `${x.make} ${x.model}`.trim().toLowerCase() === id.toLowerCase()
+		);
+		if (byCompose)
+			return `${byCompose.make} ${byCompose.model}${byCompose.is_primary ? ' (primary)' : ''}`;
+		return pwcId;
+	}
+
+	function activeClassesForEditEvent(): EventClass[] {
+		return (allEditEvents.find((e) => e.id === editEventId)?.classes ?? []).filter((c) => c.is_active);
+	}
+
+	function priceForEditClass(): string {
+		const cls = activeClassesForEditEvent().find((c) => c.key === editClassKey);
+		if (cls) return formatPrice(cls.price);
+		if (selectedReg) return formatPrice(selectedReg.price);
+		return '—';
+	}
+
+	async function saveEdit() {
+		if (!selectedReg) return;
+		if (!editEventId || !editClassKey) {
+			toast('Select an event and class.', 'error');
+			return;
+		}
+		const pwcSel = (editPwcId ?? '').trim();
+		if (!pwcSel) {
+			toast('Select or keep a PWC for this racer.', 'error');
+			return;
+		}
+		editSaving = true;
+
+		const payload: EventRegistrationAdminUpdate = {
+			is_paid: editIsPaid,
+			event_id: editEventId,
+			class_key: editClassKey
+		};
+		if (looksLikeMongoId(pwcSel)) {
+			payload.pwc_id = pwcSel;
+		} else {
+			payload.pwc_identifier = pwcSel;
+		}
+
+		const res = await updateRegistration(selectedReg.id, payload);
+		editSaving = false;
+
+		if (!res.ok || !res.data) {
+			toast(res.error ?? 'Failed to update registration', 'error');
+			return;
+		}
+
+		toast('Registration updated', 'success');
+		editing = false;
+		selectedReg = res.data;
+
+		// Refresh table so losses/paid status is consistent everywhere.
+		const refreshed = await fetchRegistrations();
+		if (refreshed.ok && refreshed.data) {
+			eventRegistrations = refreshed.data as EventRegistrations[];
+			selectedReg = findRegById(res.data.id) ?? res.data;
+			if (selectedReg) void loadRacerPwcsForDisplay(selectedReg.racer.id);
+		}
+	}
+
+	$: if (!showDetailModal) {
+		editing = false;
+		editSaving = false;
+		editFormLoading = false;
 	}
 
 	$: sortedRows = (items: RegistrationWithDetail[]) => {
@@ -188,43 +380,100 @@
 				<dl class="detail-dl">
 					<dt>Name</dt>
 					<dd>{racerDisplay(selectedReg)}</dd>
-					{#if selectedReg.racer?.email ?? selectedReg.racer_model?.email}
-						<dt>Email</dt>
-						<dd>{(selectedReg.racer ?? selectedReg.racer_model)?.email ?? '—'}</dd>
-					{/if}
-					{#if selectedReg.racer?.phone ?? selectedReg.racer_model?.phone}
-						<dt>Phone</dt>
-						<dd>{(selectedReg.racer ?? selectedReg.racer_model)?.phone ?? '—'}</dd>
-					{/if}
+					<dt>Email</dt>
+					<dd>{selectedReg.racer?.email ?? selectedReg.racer_model?.email ?? '—'}</dd>
+					<dt>Phone</dt>
+					<dd>{selectedReg.racer?.phone ?? selectedReg.racer_model?.phone ?? '—'}</dd>
 				</dl>
 			</section>
 			<section class="detail-section">
-				<h3 class="detail-heading">Event & class</h3>
-				<dl class="detail-dl">
-					<dt>Event</dt>
-					<dd>{selectedReg.event?.name ?? '—'}</dd>
-					<dt>Class</dt>
-					<dd>{selectedReg.class_name ?? selectedReg.class_key ?? '—'}</dd>
-					<dt>PWC</dt>
-					<dd>{selectedReg.pwc_identifier ?? '—'}</dd>
-					<dt>Price</dt>
-					<dd>
-						{selectedReg.event?.classes
-							? formatPrice(
-									selectedReg.event.classes.find((c: { key: string }) => c.key === selectedReg?.class_key)
-										?.price ?? selectedReg.price
-								)
-							: formatPrice(selectedReg.price)}
-					</dd>
-					<dt>Losses</dt>
-					<dd>{selectedReg.losses ?? 0}</dd>
-					<dt>Eliminated</dt>
-					<dd>{selectedReg.is_eliminated ? 'Yes' : 'No'}</dd>
-					<dt>Paid</dt>
-					<dd>{selectedReg.is_paid ? 'Yes' : 'No'}</dd>
-					<dt>Created</dt>
-					<dd>{formatDate(selectedReg.created_at)}</dd>
-				</dl>
+				<h3 class="detail-heading">Event &amp; class</h3>
+				{#if editing && editFormLoading}
+					<p class="detail-muted">Loading events and watercraft…</p>
+				{:else}
+					<dl class="detail-dl">
+						<dt>Event</dt>
+						<dd>
+							{#if editing}
+								<select
+									class="admin-edit-select"
+									value={editEventId}
+									onchange={onEditEventSelectChange}
+									disabled={editSaving}
+								>
+									{#each allEditEvents as ev}
+										<option value={ev.id}>
+											{ev.name}{formatShortDate(ev.start_date)
+												? ` (${formatShortDate(ev.start_date)})`
+												: ''}
+										</option>
+									{/each}
+								</select>
+							{:else}
+								{selectedReg.event?.name ?? '—'}
+							{/if}
+						</dd>
+						<dt>Class</dt>
+						<dd>
+							{#if editing}
+								{#key editEventId}
+									<select class="admin-edit-select" bind:value={editClassKey} disabled={editSaving}>
+										{#each activeClassesForEditEvent() as cls (cls.key)}
+											<option value={cls.key}>{cls.name} — {formatPrice(cls.price)}</option>
+										{/each}
+									</select>
+								{/key}
+							{:else}
+								{selectedReg.class_name ?? selectedReg.class_key ?? '—'}
+							{/if}
+						</dd>
+						<dt>PWC</dt>
+						<dd>
+							{#if editing}
+								<select class="admin-edit-select" bind:value={editPwcId} disabled={editSaving}>
+									{#each pwcSelectOptions(racerPwcs, editPwcId) as opt}
+										<option value={opt.value}>{opt.label}</option>
+									{/each}
+								</select>
+							{:else}
+								{pwcLabel(selectedReg.pwc_identifier)}
+							{/if}
+						</dd>
+						<dt>Price</dt>
+						<dd>
+							{#if editing}
+								{priceForEditClass()}
+							{:else}
+								{selectedReg.event?.classes
+									? formatPrice(
+											selectedReg.event.classes.find(
+												(c: { key: string }) => c.key === selectedReg?.class_key
+											)?.price ?? selectedReg.price
+										)
+									: formatPrice(selectedReg.price)}
+							{/if}
+						</dd>
+						<dt>Losses</dt>
+						<dd>{selectedReg.losses ?? 0}</dd>
+						<dt>Eliminated</dt>
+						<dd>{selectedReg.is_eliminated ? 'Yes' : 'No'}</dd>
+						<dt>Paid</dt>
+						<dd>
+							{#if editing}
+								<label class="paid-edit-label">
+									<input type="checkbox" bind:checked={editIsPaid} disabled={editSaving} />
+									<span class="paid-edit-hint">
+										Updating paid here also updates the linked PayPal checkout when one exists.
+									</span>
+								</label>
+							{:else}
+								{selectedReg.is_paid ? 'Yes' : 'No'}
+							{/if}
+						</dd>
+						<dt>Created</dt>
+						<dd>{formatDate(selectedReg.created_at)}</dd>
+					</dl>
+				{/if}
 			</section>
 			{#if selectedReg.payment}
 				<section class="detail-section">
@@ -232,8 +481,6 @@
 					<dl class="detail-dl">
 						<dt>Order ID</dt>
 						<dd><code>{selectedReg.payment.paypal_order_id}</code></dd>
-						<dt>Captured</dt>
-						<dd>{selectedReg.payment.is_captured ? 'Yes' : 'Pending'}</dd>
 						{#if selectedReg.payment.spectator_single_day_passes > 0 || selectedReg.payment.spectator_weekend_passes > 0}
 							<dt>Spectator passes</dt>
 							<dd>Day: {selectedReg.payment.spectator_single_day_passes}, Weekend: {selectedReg.payment.spectator_weekend_passes}</dd>
@@ -257,7 +504,17 @@
 		</div>
 	{/if}
 	<svelte:fragment slot="footer">
-		<button type="button" class="btn btn-primary" onclick={() => (showDetailModal = false)}>Close</button>
+		{#if editing}
+			<button type="button" class="btn btn-secondary" disabled={editSaving || editFormLoading} onclick={cancelEdit}>Cancel</button>
+			<button type="button" class="btn btn-primary" disabled={editSaving || editFormLoading} onclick={saveEdit}>
+				{editSaving ? 'Saving…' : 'Save changes'}
+			</button>
+		{:else}
+			<button type="button" class="btn btn-secondary" onclick={beginEdit}>Edit</button>
+			<button type="button" class="btn btn-primary" disabled={editSaving} onclick={() => (showDetailModal = false)}>
+				Close
+			</button>
+		{/if}
 	</svelte:fragment>
 </Modal>
 
@@ -352,5 +609,26 @@
 		margin: 0;
 		color: var(--text-muted);
 		font-size: 0.95rem;
+	}
+
+	.admin-edit-select {
+		width: 100%;
+		max-width: 22rem;
+	}
+
+	.paid-edit-label {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		cursor: pointer;
+		font-weight: 400;
+	}
+
+	.paid-edit-hint {
+		display: block;
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		line-height: 1.35;
+		max-width: 20rem;
 	}
 </style>

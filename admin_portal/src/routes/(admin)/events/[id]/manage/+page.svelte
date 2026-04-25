@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { fetchEvent, type EventBase, type EventRegistrationBase } from '$lib/api/events';
-	import { fetchEventRegistrations } from '$lib/api/registrations';
+	import { fetchEvent, type EventBase } from '$lib/api/events';
+	import { fetchEventRegistrations, type EventRegistrationAdmin } from '$lib/api/registrations';
 	import {
 		fetchRounds,
 		createRound,
@@ -33,7 +33,7 @@
 	let loading = true;
 	let error: string | null = null;
 	let event: EventBase | null = null;
-	let registrations: EventRegistrationBase[] = [];
+	let registrations: EventRegistrationAdmin[] = [];
 
 	// Tab state per class: 'details' | 'matchups' | 'speed'
 	let activeTab: Record<string, 'details' | 'matchups' | 'speed'> = {};
@@ -54,8 +54,8 @@
 	// Matchup types
 	type Matchup = {
 		matchup_id: string; // backend matchup_id
-		racerA: EventRegistrationBase;
-		racerB: EventRegistrationBase | null; // null if bye
+		racerA: EventRegistrationAdmin;
+		racerB: EventRegistrationAdmin | null; // null if bye
 		winner: string | null; // registration id
 		bracket: string; // "W" = winner bracket, "L" = loser bracket
 		seed_a: number;
@@ -104,7 +104,7 @@
 	];
 
 	/** Map backend RoundBase to local Round format */
-	function mapBackendRoundToLocal(roundBase: RoundBase, registrationsMap: Map<string, EventRegistrationBase>): Round | null {
+	function mapBackendRoundToLocal(roundBase: RoundBase, registrationsMap: Map<string, EventRegistrationAdmin>): Round | null {
 		const matchups: Matchup[] = [];
 		for (const m of roundBase.matchups) {
 			const racerA = registrationsMap.get(m.racer_a);
@@ -183,7 +183,7 @@
 	async function loadRounds(eventId: string) {
 		try {
 			// Create a map of registrations by ID for quick lookup
-			const registrationsMap = new Map<string, EventRegistrationBase>();
+			const registrationsMap = new Map<string, EventRegistrationAdmin>();
 			for (const reg of registrations) {
 				registrationsMap.set(reg.id, reg);
 			}
@@ -240,17 +240,16 @@
 		}
 	}
 
-	function racerDisplay(r: EventRegistrationBase): string {
-		const model = r.racer_model;
-		if (!model) return String(r.racer ?? '—');
-		const full = (model.full_name ?? '').toString().trim();
-		return full || String(model.email ?? '') || String(r.racer ?? '—');
+	function racerDisplay(r: EventRegistrationAdmin): string {
+		const model = r.racer ?? r.racer_model;
+		const full = (model?.full_name ?? '').toString().trim();
+		return full || (model?.email ? String(model.email) : '—');
 	}
 
 
 	/** Group registrations by class_key. Order: event classes first, then "Other". */
 	$: byClass = (() => {
-		const map = new Map<string, EventRegistrationBase[]>();
+		const map = new Map<string, EventRegistrationAdmin[]>();
 		for (const r of registrations) {
 			const k = r.class_key || 'other';
 			if (!map.has(k)) map.set(k, []);
@@ -285,7 +284,7 @@
 	}
 
 	/** Convert registrations to table rows for a class */
-	function registrationRows(regs: EventRegistrationBase[], classKey: string): Record<string, unknown>[] {
+	function registrationRows(regs: EventRegistrationAdmin[], classKey: string): Record<string, unknown>[] {
 		return regs.map((r) => {
 			const isEliminated = (r.losses ?? 0) >= 2;
 			const status = isEliminated ? 'Eliminated' : 'Active';
@@ -336,7 +335,7 @@
 	}
 
 	/** Get sorted rows for a class */
-	function getSortedRows(classKey: string, regs: EventRegistrationBase[]): Record<string, unknown>[] {
+	function getSortedRows(classKey: string, regs: EventRegistrationAdmin[]): Record<string, unknown>[] {
 		const rows = registrationRows(regs, classKey);
 		const sortKey = sortKeyByClass[classKey] || 'racer_name';
 		const sortDir = sortDirByClass[classKey] || 'asc';

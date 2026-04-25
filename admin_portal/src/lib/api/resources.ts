@@ -3,7 +3,7 @@
  * All URLs derived from VITE_API_BASE_URL. No shared code with other clients.
  */
 
-import { apiGet, apiGetBlob } from '$lib/api/client';
+import { apiGet, apiGetBlob, apiPatch, apiPost } from '$lib/api/client';
 import { fetchEvents as fetchEventsApi, type EventListResponse, type EventBase } from '$lib/api/events';
 import { fetchEventRegistrations, type EventRegistrationAdmin } from '$lib/api/registrations';
 
@@ -54,7 +54,10 @@ export interface RacerProfile extends RacerRow {
 	banner_image_updated_at?: string | null;
 	profile_image_updated_at?: string | null;
 	waiver_paths?: string[] | null;
+	waiver_signed_at?: string | null;
 	profile_complete?: boolean;
+	pwc_id?: string[] | null;
+	membership_purchased_at?: string | null;
 }
 
 export async function fetchRacers() {
@@ -64,6 +67,50 @@ export async function fetchRacers() {
 /** GET /admin/racers/{racer_id} — single racer profile (RacerBase). */
 export async function fetchRacer(id: string) {
 	return apiGet<RacerProfile>(ensureSlash(`/admin/racers/${id}`));
+}
+
+/** GET /admin/racers/{racer_id}/pwcs */
+export interface RacerPwcRow {
+	id: string;
+	make: string;
+	model: string;
+	is_primary: boolean;
+}
+
+export async function fetchRacerPwcs(racerId: string) {
+	return apiGet<RacerPwcRow[]>(
+		ensureSlash(`/admin/racers/${encodeURIComponent(racerId)}/pwcs`)
+	);
+}
+
+export interface RacerCreatePayload {
+	email: string;
+	first_name?: string;
+	last_name?: string;
+	date_of_birth?: string; // YYYY-MM-DD
+	gender?: string;
+	nationality?: string;
+	phone?: string;
+	emergency_contact_name?: string;
+	emergency_contact_phone?: string;
+	street?: string;
+	city?: string;
+	state_province?: string;
+	country?: string;
+	zip_postal_code?: string;
+	bio?: string;
+	sponsors?: string[];
+	membership_number?: string;
+}
+
+/** POST /admin/racers — create a racer (admin only). */
+export async function createRacer(payload: RacerCreatePayload) {
+	return apiPost<RacerProfile>(ensureSlash('/admin/racers'), payload);
+}
+
+/** PATCH /admin/racers/{racer_id} — update racer (admin only). */
+export async function updateRacer(racerId: string, body: Record<string, unknown>) {
+	return apiPatch<RacerProfile>(ensureSlash(`/admin/racers/${encodeURIComponent(racerId)}`), body);
 }
 
 /**

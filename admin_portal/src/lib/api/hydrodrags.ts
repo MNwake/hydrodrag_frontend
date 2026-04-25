@@ -80,6 +80,16 @@ export interface WaiverUpdate {
 	is_active?: boolean | null;
 }
 
+export interface RuleItem {
+	title: string;
+	description: string;
+}
+
+export interface RuleCategory {
+	category: string;
+	rules: RuleItem[];
+}
+
 export interface AssetUpdateResponse {
 	field: string;
 	url: string | null;
@@ -109,6 +119,7 @@ export interface HydroDragsConfigResponse {
 	social_links: SocialLink[];
 	promo_codes: PromoCode[];
 	waiver?: Waiver | null;
+	rules?: RuleCategory[] | null;
 
 	is_active: boolean;
 }
@@ -130,6 +141,7 @@ export interface HydroDragsConfigUpdate {
 	spectator_weekend_price?: number | null;
 
 	promo_codes?: PromoCode[] | null;
+	rules?: RuleCategory[] | null;
 
 	is_active?: boolean | null;
 }

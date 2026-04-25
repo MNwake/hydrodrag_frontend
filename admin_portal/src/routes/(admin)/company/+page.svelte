@@ -1,4 +1,4 @@
-<script lang="ts">
+d<script lang="ts">
 	import { onMount } from 'svelte';
 	import {
 		fetchHydroDragsConfig,
@@ -25,7 +25,8 @@
 		type SocialLink,
 		type NewsItem,
 		type PromoCode,
-		type WaiverUpdate
+		type WaiverUpdate,
+		type RuleCategory
 	} from '$lib/api/hydrodrags';
 	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import { toast } from '$lib/stores/toast';
@@ -53,6 +54,9 @@
 
 	let socialLinks: (SocialLink & { _id: string })[] = [];
 	let promoCodes: PromoCode[] = [];
+	let rules: RuleCategory[] = [];
+	let activeRuleCategoryIndex = 0;
+	let rulesTabsRef: HTMLDivElement | null = null;
 
 	// Sponsor add form
 	let showAddSponsor = false;
@@ -94,12 +98,23 @@
 	let waiverEditorRef: { getHtml(): string } | null = null;
 
 	// Collapsible sections (default collapsed)
-	type SectionKey = 'about' | 'pricing' | 'contact' | 'waiver' | 'news' | 'promoCodes' | 'sponsors' | 'mediaPartners' | 'socialLinks';
+	type SectionKey =
+		| 'about'
+		| 'pricing'
+		| 'contact'
+		| 'waiver'
+		| 'rules'
+		| 'news'
+		| 'promoCodes'
+		| 'sponsors'
+		| 'mediaPartners'
+		| 'socialLinks';
 	let openSections: Record<SectionKey, boolean> = {
 		about: false,
 		pricing: false,
 		contact: false,
 		waiver: false,
+		rules: false,
 		news: false,
 		promoCodes: false,
 		sponsors: false,
@@ -129,6 +144,14 @@
 			_id: crypto.randomUUID()
 		}));
 		promoCodes = (c.promo_codes ?? []).map((p) => ({ ...p }));
+		rules = (c.rules ?? []).map((cat) => ({
+			category: cat.category ?? '',
+			rules: (cat.rules ?? []).map((r) => ({
+				title: r.title ?? '',
+				description: r.description ?? ''
+			}))
+		}));
+		activeRuleCategoryIndex = 0;
 		const w = c.waiver;
 		if (w) {
 			waiverTitle = w.title ?? '';
@@ -162,6 +185,8 @@
 		else {
 			socialLinks = [];
 			promoCodes = [];
+			rules = [];
+			activeRuleCategoryIndex = 0;
 			waiverTitle = '';
 			waiverVersion = '';
 			waiverEffectiveDate = '';
@@ -187,6 +212,13 @@
 			spectator_single_day_price: spectatorSingleDayPrice,
 			spectator_weekend_price: spectatorWeekendPrice,
 			promo_codes: promoCodes.length ? promoCodes : undefined,
+			rules: rules.map((cat) => ({
+				category: cat.category.trim(),
+				rules: cat.rules.map((r) => ({
+					title: r.title.trim(),
+					description: r.description
+				}))
+			})),
 			is_active: true
 		};
 	}
@@ -224,6 +256,60 @@
 		} else {
 			error = res.error ?? 'Failed to save waiver';
 		}
+	}
+
+	// ---------- Rules (nested categories; saved with main form) ----------
+	function getActiveRuleCategory(): RuleCategory | null {
+		if (!rules.length) return null;
+		const safeIndex = Math.min(Math.max(activeRuleCategoryIndex, 0), rules.length - 1);
+		if (safeIndex !== activeRuleCategoryIndex) activeRuleCategoryIndex = safeIndex;
+		return rules[safeIndex];
+	}
+
+	function addRuleCategory() {
+		rules = [...rules, { category: '', rules: [] }];
+		activeRuleCategoryIndex = rules.length - 1;
+	}
+
+	function removeRuleCategory(catIndex: number) {
+		rules = rules.filter((_, i) => i !== catIndex);
+		if (!rules.length) {
+			activeRuleCategoryIndex = 0;
+			return;
+		}
+		if (catIndex < activeRuleCategoryIndex) {
+			activeRuleCategoryIndex -= 1;
+		} else if (catIndex === activeRuleCategoryIndex) {
+			activeRuleCategoryIndex = Math.max(0, Math.min(activeRuleCategoryIndex, rules.length - 1));
+		}
+	}
+
+	function addRuleItem(catIndex: number) {
+		const cat = rules[catIndex];
+		if (!cat) return;
+		cat.rules = [...cat.rules, { title: '', description: '' }];
+		rules = rules;
+	}
+
+	function removeRuleItem(catIndex: number, ruleIndex: number) {
+		const cat = rules[catIndex];
+		if (!cat) return;
+		cat.rules = cat.rules.filter((_, i) => i !== ruleIndex);
+		rules = rules;
+	}
+
+	function selectRuleCategory(index: number) {
+		activeRuleCategoryIndex = index;
+		if (!rulesTabsRef) return;
+		requestAnimationFrame(() => {
+			const tabEl = rulesTabsRef?.querySelector<HTMLElement>(`[data-rule-tab-index="${index}"]`);
+			if (!tabEl) return;
+			tabEl.scrollIntoView({
+				behavior: 'smooth',
+				block: 'nearest',
+				inline: 'center'
+			});
+		});
 	}
 
 	// ---------- Social links (inline in main form) ----------
@@ -552,7 +638,9 @@
 
 <div class="page-header">
 	<h1 class="page-title">Company information</h1>
-	<p class="page-subtitle">About, pricing, contact, sponsors, media partners, and social links</p>
+	<p class="page-subtitle">
+		About, pricing, contact, rules, sponsors, media partners, and social links
+	</p>
 </div>
 
 {#if loading}
@@ -791,6 +879,118 @@
 							{waiverSaving ? 'Saving…' : 'Save waiver'}
 						</button>
 					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Rules -->
+		<div class="collapse-card form-card">
+			<button type="button" class="collapse-header" on:click={() => toggleSection('rules')} aria-expanded={openSections.rules}>
+				<span class="collapse-title">Rules</span>
+				<span class="collapse-icon" aria-hidden="true">{openSections.rules ? '▼' : '▶'}</span>
+			</button>
+			<div class="collapse-body" class:open={openSections.rules}>
+				<div class="collapse-inner">
+					<p class="form-hint">
+						Group rules by category (for example Safety, Equipment). Each item has a short title and full
+						description. Changes are saved when you click &quot;Save changes&quot; below.
+					</p>
+					{#if rules.length}
+						<div class="rules-tabs-row">
+							<div
+								bind:this={rulesTabsRef}
+								class="rules-tabs"
+								role="tablist"
+								tabindex="0"
+								aria-label="Rule categories"
+							>
+								{#each rules as cat, catIndex}
+									<button
+										type="button"
+										data-rule-tab-index={catIndex}
+										class="rules-tab"
+										class:active={catIndex === activeRuleCategoryIndex}
+										on:click={() => selectRuleCategory(catIndex)}
+										role="tab"
+										aria-selected={catIndex === activeRuleCategoryIndex}
+									>
+										{cat.category?.trim() || `Category ${catIndex + 1}`}
+									</button>
+								{/each}
+							</div>
+							<button type="button" class="btn btn-secondary btn-sm rules-add-category-btn" on:click={addRuleCategory}>
+								+ Add category
+							</button>
+						</div>
+						{@const activeCategory = getActiveRuleCategory()}
+						{#if activeCategory}
+							<div class="rules-category">
+								<div class="rules-category-header">
+									<div class="form-group rules-category-name">
+										<label for="rule-cat-{activeRuleCategoryIndex}">Category name</label>
+										<input
+											id="rule-cat-{activeRuleCategoryIndex}"
+											type="text"
+											bind:value={activeCategory.category}
+											placeholder="e.g. Safety"
+										/>
+									</div>
+									<button
+										type="button"
+										class="btn btn-text btn-sm"
+										on:click={() => removeRuleCategory(activeRuleCategoryIndex)}
+										aria-label="Remove category"
+									>
+										Remove category
+									</button>
+								</div>
+								{#if activeCategory.rules.length}
+									<ul class="rules-item-list">
+										{#each activeCategory.rules as rule, ruleIndex}
+											<li class="rules-item">
+												<div class="form-group">
+													<label for="rule-title-{activeRuleCategoryIndex}-{ruleIndex}">Title</label>
+													<input
+														id="rule-title-{activeRuleCategoryIndex}-{ruleIndex}"
+														type="text"
+														bind:value={rule.title}
+														placeholder="Rule title"
+													/>
+												</div>
+												<div class="form-group form-group--full">
+													<label for="rule-desc-{activeRuleCategoryIndex}-{ruleIndex}">Description</label>
+													<textarea
+														id="rule-desc-{activeRuleCategoryIndex}-{ruleIndex}"
+														bind:value={rule.description}
+														rows="3"
+														placeholder="Full rule text…"
+													></textarea>
+												</div>
+												<button
+													type="button"
+													class="btn btn-text btn-sm rules-item-remove"
+													on:click={() => removeRuleItem(activeRuleCategoryIndex, ruleIndex)}
+													aria-label="Remove rule"
+												>
+													Remove rule
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{:else}
+									<p class="form-hint rules-empty">No rules in this category yet.</p>
+								{/if}
+								<button type="button" class="btn btn-secondary btn-sm" on:click={() => addRuleItem(activeRuleCategoryIndex)}>
+									+ Add rule
+								</button>
+							</div>
+						{/if}
+					{:else}
+						<p class="form-hint">No rule categories yet. Add one below.</p>
+						<button type="button" class="btn btn-secondary btn-sm" style="margin-top: 0.25rem;" on:click={addRuleCategory}>
+							+ Add category
+						</button>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -1221,7 +1421,8 @@
 		transition: max-height 0.3s ease-out;
 	}
 	.collapse-body.open {
-		max-height: 5000px;
+		max-height: none;
+		overflow: visible;
 	}
 	.collapse-inner {
 		padding: 1.25rem 1.25rem 1.25rem 1.25rem;
@@ -1404,6 +1605,114 @@
 		align-items: center;
 		gap: 0.5rem;
 		margin-left: auto;
+	}
+	.rules-category {
+		margin-bottom: 1.25rem;
+		padding: 1rem;
+		background: var(--bg-muted);
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+	}
+	.rules-tabs-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.9rem;
+	}
+	.rules-tabs {
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding-bottom: 0.35rem;
+		flex: 1;
+		min-width: 0;
+		flex-wrap: nowrap;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+	.rules-tabs::-webkit-scrollbar {
+		display: none;
+	}
+	.rules-add-category-btn {
+		flex-shrink: 0;
+	}
+	.rules-tab {
+		flex: 0 0 auto;
+		appearance: none;
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+		color: var(--text-muted);
+		border-radius: 999px;
+		padding: 0.4rem 0.85rem;
+		white-space: nowrap;
+		cursor: pointer;
+		font: inherit;
+		font-size: 0.9rem;
+		transition: border-color 0.15s, color 0.15s, background 0.15s;
+	}
+	.rules-tab:hover {
+		border-color: var(--primary);
+		color: var(--text);
+	}
+	.rules-tab.active {
+		background: var(--primary);
+		border-color: var(--primary);
+		color: white;
+	}
+	.rules-category-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 0.75rem 1rem;
+		margin-bottom: 0.75rem;
+	}
+	.rules-category-name {
+		flex: 1;
+		min-width: 12rem;
+		margin-bottom: 0;
+	}
+	.rules-item-list {
+		list-style: none;
+		margin: 0 0 0.75rem 0;
+		padding: 0;
+	}
+	.rules-item {
+		display: grid;
+		grid-template-columns: 1fr 1fr auto;
+		gap: 0.75rem 1rem;
+		align-items: start;
+		padding: 0.75rem 0;
+		border-top: 1px solid var(--border);
+	}
+	.rules-item .form-group--full {
+		grid-column: 1 / -1;
+	}
+	.rules-item-remove {
+		grid-column: 3;
+		grid-row: 1;
+		align-self: start;
+		justify-self: end;
+	}
+	.rules-empty {
+		margin: 0 0 0.5rem 0;
+	}
+	@media (max-width: 720px) {
+		.rules-tabs-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+		.rules-add-category-btn {
+			align-self: flex-start;
+		}
+		.rules-item {
+			grid-template-columns: 1fr;
+		}
+		.rules-item-remove {
+			grid-column: 1;
+			grid-row: auto;
+			justify-self: start;
+		}
 	}
 	.form-actions {
 		margin-top: 1rem;
