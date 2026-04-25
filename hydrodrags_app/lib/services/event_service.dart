@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/event.dart';
+import '../utils/api_error_logger.dart';
 import '../models/event_registration_list_item.dart';
 import '../models/round.dart';
 import '../models/speed_ranking.dart';
@@ -67,7 +68,8 @@ class EventService {
         }
         throw Exception('Failed to load events: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get events');
       if (kDebugMode) {
         print('Error getting events: $e');
       }
@@ -111,7 +113,8 @@ class EventService {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get event');
       if (kDebugMode) {
         print('Error getting event: $e');
       }
@@ -161,7 +164,8 @@ class EventService {
         }
         return [];
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get event registrations');
       if (kDebugMode) {
         print('Error getting event registrations: $e');
       }
@@ -211,7 +215,8 @@ class EventService {
         }
         return [];
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get rounds');
       if (kDebugMode) {
         print('Error getting rounds: $e');
       }
@@ -251,7 +256,8 @@ class EventService {
         print('Failed to get speed session: ${response.statusCode}');
       }
       return null;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get speed session');
       if (kDebugMode) {
         print('Error getting speed session: $e');
       }

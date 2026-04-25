@@ -1,8 +1,16 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../utils/api_error_logger.dart';
+
+/// Android options that are more reliable on emulators (avoids some KeyStore crashes).
+const AndroidOptions _androidOptions = AndroidOptions(
+  resetOnError: true,
+  sharedPreferencesName: 'flutter_secure_storage_hydrodrags',
+);
 
 /// Authentication state
 enum AuthStatus {
@@ -39,7 +47,9 @@ class VerifyCodeResponse {
 
 /// AuthService manages passwordless email authentication
 class AuthService extends ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: _androidOptions,
+  );
   
   // Storage keys
   static const String _tokenKey = 'auth_token';
@@ -65,7 +75,12 @@ class AuthService extends ChangeNotifier {
   bool get isServerUnavailable => _status == AuthStatus.serverUnavailable;
 
   AuthService() {
-    _checkExistingAuth();
+    // On Android emulators, KeyStore can crash if touched too early. Defer first access.
+    if (Platform.isAndroid) {
+      Future<void>.delayed(const Duration(milliseconds: 300), _checkExistingAuth);
+    } else {
+      _checkExistingAuth();
+    }
   }
 
   /// Check if server is available
@@ -98,7 +113,8 @@ class AuthService extends ChangeNotifier {
         return isHealthy;
       }
       return false;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Health Check');
       if (kDebugMode) {
         print('Server health check failed: $e');
       }
@@ -191,7 +207,8 @@ class AuthService extends ChangeNotifier {
           print('Auto-login: no stored credentials.');
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Auto-login');
       // Transient error (storage, network) - do NOT clear auth; keep tokens for retry
       _status = AuthStatus.unauthenticated;
       if (kDebugMode) {
@@ -250,7 +267,8 @@ class AuthService extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'tryAuthenticateWithExistingTokens');
       if (kDebugMode) {
         print('Error checking existing tokens: $e');
       }
@@ -325,12 +343,14 @@ class AuthService extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-    } on http.ClientException catch (e) {
+    } on http.ClientException catch (e, stack) {
+      logApiError(e, stack, 'Request verification code (ClientException)');
       _errorMessage = 'Network error: ${e.message}. Please check your connection.';
       _isLoading = false;
       notifyListeners();
       return false;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Request verification code');
       if (kDebugMode) {
         print('Error requesting verification code: $e');
       }
@@ -464,7 +484,8 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Verify code');
       if (kDebugMode) {
         print('Error verifying code: $e');
       }
@@ -608,8 +629,8 @@ class AuthService extends ChangeNotifier {
         }
         return false;
       }
-    } catch (e) {
-      // Handle MissingPluginException gracefully during hot restart
+    } catch (e, stack) {
+      logApiError(e, stack, 'Refresh token');
       if (kDebugMode) {
         print('Error in refresh token flow: $e');
       }
@@ -757,7 +778,8 @@ class AuthService extends ChangeNotifier {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Fetch email /me');
       if (kDebugMode) {
         print('Error fetching email from /me: $e');
       }
@@ -837,7 +859,8 @@ class AuthService extends ChangeNotifier {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Profile completion /me');
       if (kDebugMode) {
         print('Error checking profile completion status: $e');
       }

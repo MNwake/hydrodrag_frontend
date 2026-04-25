@@ -10,7 +10,6 @@ class PWC {
   String? serialNumber; // Engine or hull serial number
   List<String> modifications; // e.g., ["Turbocharger", "Supercharger", "Nitrous Oxide", "ECU Tune", "Exhaust", "Prop", "Intake"]
   String? notes; // Additional notes or custom modifications
-  bool isPrimary; // Whether this is the primary PWC for racing
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -26,7 +25,6 @@ class PWC {
     this.serialNumber,
     this.modifications = const [],
     this.notes,
-    this.isPrimary = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -47,7 +45,6 @@ class PWC {
           ? List<String>.from(json['modifications'] as List)
           : [],
       notes: json['notes'] as String?,
-      isPrimary: json['is_primary'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -71,7 +68,6 @@ class PWC {
       if (serialNumber != null) 'serial_number': serialNumber,
       'modifications': modifications,
       if (notes != null) 'notes': notes,
-      'is_primary': isPrimary,
     };
   }
 
@@ -88,7 +84,6 @@ class PWC {
       if (serialNumber != null) 'serial_number': serialNumber,
       'modifications': modifications,
       if (notes != null) 'notes': notes,
-      'is_primary': isPrimary,
     };
   }
 
@@ -105,7 +100,6 @@ class PWC {
     if (serialNumber != null) map['serial_number'] = serialNumber;
     map['modifications'] = modifications;
     if (notes != null) map['notes'] = notes;
-    map['is_primary'] = isPrimary;
     return map;
   }
 

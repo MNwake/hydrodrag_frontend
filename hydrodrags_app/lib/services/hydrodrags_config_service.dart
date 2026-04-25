@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/hydrodrags_config.dart';
+import '../utils/api_error_logger.dart';
 
 /// Fetches HydroDrags public config (info tab content). No auth required.
 class HydroDragsConfigService {
@@ -33,7 +34,8 @@ class HydroDragsConfigService {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get HydroDrags config');
       if (kDebugMode) {
         print('Error getting HydroDrags config: $e');
       }

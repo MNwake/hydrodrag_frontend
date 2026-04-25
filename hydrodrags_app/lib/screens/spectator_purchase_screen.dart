@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/event.dart';
 import '../models/hydrodrags_config.dart';
@@ -24,6 +25,7 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _zipController = TextEditingController();
 
   int _step = 0; // 0: info, 1: tickets, 2: review & pay
   int _singleDayPasses = 0;
@@ -54,6 +56,7 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _zipController.dispose();
     super.dispose();
   }
 
@@ -100,8 +103,13 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = PhoneFormatter.getDigitsOnly(_phoneController.text);
+    final zip = _zipController.text.trim();
     if (name.isEmpty || email.isEmpty || phone.length < 10) {
       ErrorHandlerService.showError(context, 'Please enter name, email, and phone.');
+      return;
+    }
+    if (zip.length != 5 || int.tryParse(zip) == null) {
+      ErrorHandlerService.showError(context, 'Please enter a valid 5-digit ZIP code.');
       return;
     }
     if (_singleDayPasses == 0 && _weekendPasses == 0) {
@@ -117,6 +125,7 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
         purchaserName: name,
         purchaserEmail: email,
         purchaserPhone: _phoneController.text.trim(),
+        purchaserZip: zip,
         spectatorSingleDayPasses: _singleDayPasses,
         spectatorWeekendPasses: _weekendPasses,
       );
@@ -307,6 +316,27 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
             keyboardType: TextInputType.phone,
             inputFormatters: [PhoneNumberInputFormatter()],
             validator: (v) => PhoneFormatter.validatePhoneNumber(v),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _zipController,
+            decoration: InputDecoration(
+              labelText: l10n.zipPostalCode,
+              hintText: '12345',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.pin_outlined),
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(5),
+            ],
+            validator: (v) {
+              final digits = v?.trim() ?? '';
+              if (digits.isEmpty) return 'ZIP code is required';
+              if (digits.length != 5) return 'Enter a 5-digit ZIP code';
+              return null;
+            },
           ),
         ],
       ),

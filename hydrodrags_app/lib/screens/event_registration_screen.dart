@@ -101,7 +101,7 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
         setState(() {
           _pwcs = pwcs;
           if (pwcs.isNotEmpty) {
-            _primaryPWC = pwcs.firstWhere((p) => p.isPrimary, orElse: () => pwcs.first);
+            _primaryPWC = pwcs.first;
             if (_classRows.length == 1 && _classRows.first.pwcId == null) {
               _classRows.first.pwcId = _primaryPWC?.id;
             }

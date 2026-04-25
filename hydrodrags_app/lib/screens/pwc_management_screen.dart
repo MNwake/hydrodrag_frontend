@@ -243,7 +243,7 @@ class _PWCManagementScreenState extends State<PWCManagementScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title row with primary badge
+                        // Title row
                         Row(
                           children: [
                             Expanded(
@@ -254,21 +254,6 @@ class _PWCManagementScreenState extends State<PWCManagementScreen> {
                                 ),
                               ),
                             ),
-                            if (pwc.isPrimary)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  l10n.primary,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         // Optional details (when present)
@@ -325,17 +310,6 @@ class _PWCManagementScreenState extends State<PWCManagementScreen> {
                         ),
                       ),
                       PopupMenuItem(
-                        value: 'set_primary',
-                        enabled: !pwc.isPrimary,
-                        child: Row(
-                          children: [
-                            Icon(Icons.star, size: 20, color: theme.colorScheme.onSurface),
-                            const SizedBox(width: 12),
-                            Text(l10n.setAsPrimary),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
@@ -358,43 +332,6 @@ class _PWCManagementScreenState extends State<PWCManagementScreen> {
                         );
                         if (result == true && mounted) {
                           _loadPWCs();
-                        }
-                      } else if (value == 'set_primary') {
-                        final authService = Provider.of<AuthService>(context, listen: false);
-                        final pwcService = PWCService(authService);
-                        if (pwc.id != null) {
-                          final primaryPwc = PWC(
-                            id: pwc.id,
-                            make: pwc.make,
-                            model: pwc.model,
-                            year: pwc.year,
-                            engineSize: pwc.engineSize,
-                            engineClass: pwc.engineClass,
-                            color: pwc.color,
-                            registrationNumber: pwc.registrationNumber,
-                            serialNumber: pwc.serialNumber,
-                            modifications: List.from(pwc.modifications),
-                            notes: pwc.notes,
-                            isPrimary: true,
-                            createdAt: pwc.createdAt,
-                            updatedAt: pwc.updatedAt,
-                          );
-                          final success = await pwcService.updatePWC(primaryPwc);
-                          if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${pwc.displayName} ${l10n.setAsPrimary.toLowerCase()}'),
-                              ),
-                            );
-                            _loadPWCs();
-                          } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.error),
-                                backgroundColor: theme.colorScheme.error,
-                              ),
-                            );
-                          }
                         }
                       } else if (value == 'delete') {
                         _deletePWC(pwc);

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/pwc.dart';
+import '../utils/api_error_logger.dart';
 import 'auth_service.dart';
 
 /// Service for managing PWC (Personal Watercraft) data and API interactions
@@ -67,7 +68,6 @@ class PWCService {
               id: name,
               make: name,
               model: '',
-              isPrimary: i == 0,
             ));
           }
         }
@@ -88,7 +88,8 @@ class PWCService {
         }
         throw Exception('Failed to load PWCs: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get PWCs');
       if (kDebugMode) {
         print('Error getting PWCs: $e');
       }
@@ -141,7 +142,8 @@ class PWCService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Add PWC');
       if (kDebugMode) {
         print('Error adding PWC: $e');
       }
@@ -150,7 +152,7 @@ class PWCService {
   }
 
   /// Update an existing PWC
-  /// PATCH /pwcs/{pwc_id}
+  /// PATCH /me/pwc/{pwc_id} with body: {"new_name": "..."}
   Future<bool> updatePWC(PWC pwc) async {
     try {
       if (pwc.id == null) {
@@ -163,17 +165,14 @@ class PWCService {
         throw Exception('No access token available');
       }
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/pwcs/${pwc.id}');
+      final uri = Uri.parse('${ApiConfig.baseUrl}/me/pwc/${pwc.id}');
+      final requestBody = jsonEncode({'new_name': pwc.displayName});
 
       if (kDebugMode) {
         print('=== API Request: Update PWC ===');
         print('URL: $uri');
         print('Method: PATCH');
         print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
-
-      final requestBody = jsonEncode(pwc.toUpdateJson());
-      if (kDebugMode) {
         print('Request Body: $requestBody');
       }
 
@@ -204,7 +203,8 @@ class PWCService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Update PWC');
       if (kDebugMode) {
         print('Error updating PWC: $e');
       }
@@ -213,7 +213,7 @@ class PWCService {
   }
 
   /// Delete a PWC
-  /// DELETE /pwcs/{pwc_id}
+  /// DELETE /me/pwc/{pwc_id}
   Future<bool> deletePWC(String pwcId) async {
     try {
       await _authService.refreshTokenIfNeeded();
@@ -222,7 +222,7 @@ class PWCService {
         throw Exception('No access token available');
       }
 
-      final uri = Uri.parse('${ApiConfig.baseUrl}/pwcs/$pwcId');
+      final uri = Uri.parse('${ApiConfig.baseUrl}/me/pwc/$pwcId');
 
       if (kDebugMode) {
         print('=== API Request: Delete PWC ===');
@@ -257,7 +257,8 @@ class PWCService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Delete PWC');
       if (kDebugMode) {
         print('Error deleting PWC: $e');
       }

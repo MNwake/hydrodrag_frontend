@@ -60,7 +60,6 @@ class _PWCEditScreenState extends State<PWCEditScreen> {
           id: widget.pwc!.id,
           make: name,
           model: '',
-          isPrimary: widget.pwc!.isPrimary,
           modifications: widget.pwc!.modifications,
         );
         success = await pwcService.updatePWC(pwc);

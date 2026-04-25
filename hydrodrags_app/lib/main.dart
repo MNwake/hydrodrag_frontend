@@ -23,6 +23,9 @@ import 'screens/spectator_purchase_screen.dart';
 import 'models/event.dart';
 
 void main() {
+  // Always log so you can confirm in adb logcat (release + debug) which API is used
+  print('[HydroDrags] API_BASE_URL = ${ApiConfig.baseUrl}');
+  print('[HydroDrags] Expected production: https://api.hydrodrags.koesterventures.com');
   if (kDebugMode) {
     debugPrint('[App] Starting - API_BASE_URL=${ApiConfig.baseUrl}');
   }

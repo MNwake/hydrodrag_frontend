@@ -1,9 +1,8 @@
 class ApiConfig {
-  // Backend URL configuration
-  // For physical devices, use your computer's IP address
-  // For simulators/emulators, localhost works
-  // Override via: flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8000
-  // defaultValue: 'http://172.99.99.17:8000',  // public wifi
+  // Backend URL configuration.
+  // Production (Play Store): use build_appbundle_playstore.sh or
+  //   flutter build appbundle --dart-define=API_BASE_URL='https://api.hydrodrags.koesterventures.com'
+  // Local dev: flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8000
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://api.hydrodrags.koesterventures.com',

@@ -1433,18 +1433,6 @@ abstract class AppLocalizations {
   /// **'Add your first personal watercraft to get started'**
   String get addPWCToGetStarted;
 
-  /// Label for primary PWC
-  ///
-  /// In en, this message translates to:
-  /// **'Primary'**
-  String get primary;
-
-  /// Action to set a PWC as primary
-  ///
-  /// In en, this message translates to:
-  /// **'Set as Primary'**
-  String get setAsPrimary;
-
   /// Title for delete PWC confirmation dialog
   ///
   /// In en, this message translates to:
@@ -1630,18 +1618,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Additional notes or custom modifications'**
   String get additionalNotes;
-
-  /// Checkbox label for setting PWC as primary
-  ///
-  /// In en, this message translates to:
-  /// **'Set as Primary PWC'**
-  String get setAsPrimaryPWC;
-
-  /// Description for primary PWC checkbox
-  ///
-  /// In en, this message translates to:
-  /// **'This will be your default PWC for race registrations'**
-  String get primaryPWCDescription;
 
   /// Text showing additional items count
   ///
@@ -2080,6 +2056,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Brackets'**
   String get bracketsTab;
+
+  /// No description provided for @rulesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
+  String get rulesTab;
 
   /// No description provided for @resultsTab.
   ///

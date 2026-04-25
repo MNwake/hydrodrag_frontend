@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../config/api_config.dart';
+import '../utils/api_error_logger.dart';
 
 /// Service for caching images from the backend
 class ImageCacheService {
@@ -77,11 +78,11 @@ class ImageCacheService {
                 }
               }
             }
-          } catch (e) {
+          } catch (e, stack) {
+            logApiError(e, stack, 'Image cache metadata');
             if (kDebugMode) {
               print('Error reading metadata, will re-download: $e');
             }
-            // If metadata is corrupted, re-download
             needsDownload = true;
           }
         } else if (updatedAt == null) {
@@ -127,7 +128,8 @@ class ImageCacheService {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Image cache get');
       if (kDebugMode) {
         print('Error caching image: $e');
       }
@@ -146,7 +148,8 @@ class ImageCacheService {
           print('Image cache cleared');
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Image cache clear');
       if (kDebugMode) {
         print('Error clearing cache: $e');
       }

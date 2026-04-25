@@ -682,12 +682,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addPWCToGetStarted => 'Agregue su primera embarcación personal para comenzar';
 
   @override
-  String get primary => 'Principal';
-
-  @override
-  String get setAsPrimary => 'Establecer como Principal';
-
-  @override
   String get deletePWC => 'Eliminar PWC';
 
   @override
@@ -779,12 +773,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get additionalNotes => 'Notas adicionales o modificaciones personalizadas';
-
-  @override
-  String get setAsPrimaryPWC => 'Establecer como PWC Principal';
-
-  @override
-  String get primaryPWCDescription => 'Este será su PWC predeterminado para registros de carreras';
 
   @override
   String andMore(int count) {
@@ -1006,6 +994,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get bracketsTab => 'Llaves';
+
+  @override
+  String get rulesTab => 'Reglas';
 
   @override
   String get resultsTab => 'Resultados';

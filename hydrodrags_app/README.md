@@ -70,6 +70,22 @@ flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8000
 
 Set `API_BASE_URL` in `lib/config/api_config.dart` or via `--dart-define` for production builds.
 
+### Build for Google Play Store
+
+**Always** pass the production API URL when building the AAB so the store build uses the live server:
+
+```bash
+./build_appbundle_playstore.sh
+```
+
+Or manually:
+
+```bash
+flutter build appbundle --dart-define=API_BASE_URL='https://api.hydrodrags.koesterventures.com'
+```
+
+Upload the output: `build/app/outputs/bundle/release/app-release.aab`.
+
 ## Backend
 
 The app expects a REST API for auth, profile, PWC, events, registrations, PayPal checkout (racer and spectator), and speed sessions. Example surface:

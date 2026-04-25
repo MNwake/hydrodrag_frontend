@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/event_registration.dart';
+import '../utils/api_error_logger.dart';
 import 'auth_service.dart';
 
 /// Response from backend when creating a PayPal order.
@@ -85,7 +86,8 @@ class CheckoutService {
         return PromoVerifyResult.fromJson(json);
       }
       return PromoVerifyResult(valid: false);
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Checkout verify promo');
       if (kDebugMode) debugPrint('[Checkout] verify promo error: $e');
       rethrow;
     }
@@ -141,7 +143,8 @@ class CheckoutService {
         return CreateCheckoutResponse.fromJson(json);
       }
       return null;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Checkout create PayPal order');
       if (kDebugMode) debugPrint('[Checkout] Create checkout error: $e');
       rethrow;
     }
@@ -181,7 +184,8 @@ class CheckoutService {
         return json['success'] as bool? ?? false;
       }
       return false;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Checkout capture PayPal order');
       if (kDebugMode) debugPrint('[Checkout] Capture checkout error: $e');
       rethrow;
     }

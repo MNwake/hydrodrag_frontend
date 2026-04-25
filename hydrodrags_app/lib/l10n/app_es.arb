@@ -262,14 +262,6 @@
   "@addPWCToGetStarted": {
     "description": "Mensaje animando al usuario a agregar su primer PWC"
   },
-  "primary": "Principal",
-  "@primary": {
-    "description": "Etiqueta para PWC principal"
-  },
-  "setAsPrimary": "Establecer como Principal",
-  "@setAsPrimary": {
-    "description": "Acción para establecer un PWC como principal"
-  },
   "deletePWC": "Eliminar PWC",
   "@deletePWC": {
     "description": "Título para el diálogo de confirmación de eliminación de PWC"
@@ -393,14 +385,6 @@
   "additionalNotes": "Notas adicionales o modificaciones personalizadas",
   "@additionalNotes": {
     "description": "Sugerencia para el campo de notas"
-  },
-  "setAsPrimaryPWC": "Establecer como PWC Principal",
-  "@setAsPrimaryPWC": {
-    "description": "Etiqueta de casilla de verificación para establecer PWC como principal"
-  },
-  "primaryPWCDescription": "Este será su PWC predeterminado para registros de carreras",
-  "@primaryPWCDescription": {
-    "description": "Descripción para la casilla de verificación de PWC principal"
   },
   "andMore": "{count} más",
   "@andMore": {

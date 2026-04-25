@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/spectator_ticket.dart';
+import '../utils/api_error_logger.dart';
 
 /// Response from create spectator checkout.
 class SpectatorCreateCheckoutResponse {
@@ -55,6 +56,7 @@ class SpectatorCheckoutService {
     required String purchaserName,
     required String purchaserEmail,
     required String purchaserPhone,
+    required String purchaserZip,
     required int spectatorSingleDayPasses,
     required int spectatorWeekendPasses,
   }) async {
@@ -64,6 +66,7 @@ class SpectatorCheckoutService {
         'purchaser_name': purchaserName,
         'purchaser_email': purchaserEmail,
         'purchaser_phone': purchaserPhone,
+        'purchaser_zip': purchaserZip,
         'spectator_single_day_passes': spectatorSingleDayPasses,
         'spectator_weekend_passes': spectatorWeekendPasses,
       };
@@ -90,7 +93,8 @@ class SpectatorCheckoutService {
         return SpectatorCreateCheckoutResponse.fromJson(json);
       }
       return null;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Spectator checkout create');
       if (kDebugMode) debugPrint('[SpectatorCheckout] create error: $e');
       rethrow;
     }
@@ -125,7 +129,8 @@ class SpectatorCheckoutService {
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       return SpectatorCaptureResponse.fromJson(json);
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Spectator checkout capture');
       if (kDebugMode) debugPrint('[SpectatorCheckout] capture error: $e');
       rethrow;
     }

@@ -2,7 +2,7 @@ name: hydrodrags_app
 description: "HydroDrags mobile application for racer registration, membership, and waiver management."
 publish_to: 'none'
 
-version: 1.1.4+1
+version: 1.2.0+9
 
 environment:
   sdk: ^3.10.7

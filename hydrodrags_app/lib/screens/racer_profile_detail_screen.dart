@@ -222,21 +222,6 @@ class _RacerProfileDetailScreenState extends State<RacerProfileDetailScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    if (pwc.isPrimary)
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 8),
-                                        child: Chip(
-                                          label: Text(
-                                            'Primary',
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: theme.colorScheme.onPrimaryContainer,
-                                            ),
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                          padding: EdgeInsets.zero,
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                      ),
                                     Expanded(
                                       child: Text(
                                         pwc.displayName,

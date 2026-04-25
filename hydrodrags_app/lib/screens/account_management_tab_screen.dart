@@ -1383,11 +1383,13 @@ class _AccountManagementTabScreenState extends State<AccountManagementTabScreen>
   }
 
   String _getInitials(String name) {
-    if (name.isEmpty) return 'U';
-    final parts = name.trim().split(' ');
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return 'U';
+    final parts = trimmed.split(' ').where((s) => s.isNotEmpty).toList();
+    if (parts.isEmpty) return 'U';
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name[0].toUpperCase();
+    return parts[0][0].toUpperCase();
   }
 }

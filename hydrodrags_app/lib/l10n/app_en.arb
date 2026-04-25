@@ -442,14 +442,6 @@
   "@addPWCToGetStarted": {
     "description": "Message encouraging user to add their first PWC"
   },
-  "primary": "Primary",
-  "@primary": {
-    "description": "Label for primary PWC"
-  },
-  "setAsPrimary": "Set as Primary",
-  "@setAsPrimary": {
-    "description": "Action to set a PWC as primary"
-  },
   "deletePWC": "Delete PWC",
   "@deletePWC": {
     "description": "Title for delete PWC confirmation dialog"
@@ -573,14 +565,6 @@
   "additionalNotes": "Additional notes or custom modifications",
   "@additionalNotes": {
     "description": "Hint for notes field"
-  },
-  "setAsPrimaryPWC": "Set as Primary PWC",
-  "@setAsPrimaryPWC": {
-    "description": "Checkbox label for setting PWC as primary"
-  },
-  "primaryPWCDescription": "This will be your default PWC for race registrations",
-  "@primaryPWCDescription": {
-    "description": "Description for primary PWC checkbox"
   },
   "andMore": "{count} more",
   "@andMore": {

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/pwc.dart';
+import '../utils/api_error_logger.dart';
 import '../models/racer_profile.dart';
 import '../models/my_registration.dart';
 import '../models/spectator_ticket.dart';
@@ -63,7 +64,8 @@ class RacerService {
       
       final decoded = utf8.decode(base64Decode(normalizedPayload));
       return jsonDecode(decoded) as Map<String, dynamic>;
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'JWT decode');
       if (kDebugMode) {
         print('Error decoding JWT token: $e');
       }
@@ -153,7 +155,8 @@ class RacerService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Upload profile image');
       if (kDebugMode) {
         print('Error uploading profile image: $e');
       }
@@ -219,7 +222,8 @@ class RacerService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Upload banner image');
       if (kDebugMode) {
         print('Error uploading banner image: $e');
       }
@@ -282,7 +286,8 @@ class RacerService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Upload waiver');
       if (kDebugMode) {
         print('Error uploading waiver: $e');
       }
@@ -379,7 +384,8 @@ class RacerService {
         }
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get racer profile /me');
       if (kDebugMode) {
         print('Error getting racer profile: $e');
       }
@@ -414,7 +420,8 @@ class RacerService {
             .toList();
       }
       return [];
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get my tickets');
       if (kDebugMode) print('Error getting my tickets: $e');
       rethrow;
     }
@@ -447,7 +454,8 @@ class RacerService {
             .toList();
       }
       return [];
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get my registrations');
       if (kDebugMode) print('Error getting my registrations: $e');
       rethrow;
     }
@@ -507,7 +515,8 @@ class RacerService {
         }
         throw Exception('Failed to load racers: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get racers');
       if (kDebugMode) {
         print('Error getting racers: $e');
       }
@@ -604,7 +613,8 @@ class RacerService {
         }
         return false;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Update racer profile');
       if (kDebugMode) {
         print('Error updating racer profile: $e');
       }
@@ -644,7 +654,8 @@ class RacerService {
         if (kDebugMode) print('Failed to get racer: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get racer by id');
       if (kDebugMode) print('Error getting racer by id: $e');
       return null;
     }
@@ -734,7 +745,8 @@ class RacerService {
         }
         return [];
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'Get racer PWCs');
       if (kDebugMode) {
         print('Error getting racer PWCs: $e');
       }

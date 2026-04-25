@@ -79,6 +79,40 @@ class WaiverConfig {
   }
 }
 
+/// Single rule line item under a rule category.
+class RuleItem {
+  final String title;
+  final String description;
+
+  RuleItem({required this.title, required this.description});
+
+  factory RuleItem.fromJson(Map<String, dynamic> json) {
+    return RuleItem(
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+    );
+  }
+}
+
+/// Group of related rules from config.
+class RuleCategory {
+  final String category;
+  final List<RuleItem> rules;
+
+  RuleCategory({required this.category, this.rules = const []});
+
+  factory RuleCategory.fromJson(Map<String, dynamic> json) {
+    return RuleCategory(
+      category: json['category'] as String? ?? '',
+      rules:
+          (json['rules'] as List<dynamic>?)
+              ?.map((e) => RuleItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
 /// News item for the info tab
 class NewsItem {
   final String title;
@@ -106,10 +140,13 @@ class NewsItem {
 /// Root config for the HydroDrags info tab (from GET /hydrodrags/config)
 class HydroDragsConfig {
   final String companyName;
+
   /// Main headline for the info page hero (e.g. "2025 Fueltech US Nationals World Championships").
   final String? headline;
+
   /// URL or path for the logo image (e.g. "/assets/logo.png"). Resolve with API base URL.
   final String? logoUrl;
+
   /// URL or path for the banner image (e.g. "/assets/banner.png"). Resolve with API base URL.
   final String? bannerUrl;
   final String? about;
@@ -127,6 +164,7 @@ class HydroDragsConfig {
   final List<Sponsor> mediaPartners;
   final List<SocialLink> socialLinks;
   final WaiverConfig? waiver;
+  final List<RuleCategory> rules;
   final bool isActive;
 
   HydroDragsConfig({
@@ -149,6 +187,7 @@ class HydroDragsConfig {
     this.mediaPartners = const [],
     this.socialLinks = const [],
     this.waiver,
+    this.rules = const [],
     this.isActive = true,
   });
 
@@ -163,7 +202,8 @@ class HydroDragsConfig {
       es: json['es'] != null
           ? SpanishContent.fromJson(json['es'] as Map<String, dynamic>)
           : null,
-      news: (json['news'] as List<dynamic>?)
+      news:
+          (json['news'] as List<dynamic>?)
               ?.map((e) => NewsItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -177,28 +217,38 @@ class HydroDragsConfig {
           (json['spectator_single_day_price'] as num?)?.toDouble() ?? 0,
       spectatorWeekendPrice:
           (json['spectator_weekend_price'] as num?)?.toDouble() ?? 0,
-      sponsors: (json['sponsors'] as List<dynamic>?)
+      sponsors:
+          (json['sponsors'] as List<dynamic>?)
               ?.map((e) => Sponsor.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      mediaPartners: (json['media_partners'] as List<dynamic>?)
+      mediaPartners:
+          (json['media_partners'] as List<dynamic>?)
               ?.map((e) => Sponsor.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      socialLinks: (json['social_links'] as List<dynamic>?)
+      socialLinks:
+          (json['social_links'] as List<dynamic>?)
               ?.map((e) => SocialLink.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       waiver: json['waiver'] != null
           ? WaiverConfig.fromJson(json['waiver'] as Map<String, dynamic>)
           : null,
+      rules:
+          (json['rules'] as List<dynamic>?)
+              ?.map((e) => RuleCategory.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       isActive: json['is_active'] as bool? ?? true,
     );
   }
 
   /// About text for current locale (es if Spanish, else default about)
   String? aboutForLocale(String localeLanguageCode) {
-    if (localeLanguageCode == 'es' && es?.about != null && es!.about!.isNotEmpty) {
+    if (localeLanguageCode == 'es' &&
+        es?.about != null &&
+        es!.about!.isNotEmpty) {
       return es!.about;
     }
     return about;
@@ -206,7 +256,9 @@ class HydroDragsConfig {
 
   /// Tagline for current locale (es if Spanish, else default tagline)
   String? taglineForLocale(String localeLanguageCode) {
-    if (localeLanguageCode == 'es' && es?.tagline != null && es!.tagline!.isNotEmpty) {
+    if (localeLanguageCode == 'es' &&
+        es?.tagline != null &&
+        es!.tagline!.isNotEmpty) {
       return es!.tagline;
     }
     return tagline;

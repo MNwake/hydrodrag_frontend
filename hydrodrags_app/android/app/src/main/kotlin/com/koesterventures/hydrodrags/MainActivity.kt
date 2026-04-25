@@ -1,4 +1,4 @@
-package com.example.hydrodrags_app
+package com.koesterventures.hydrodrags
 
 import io.flutter.embedding.android.FlutterActivity
 

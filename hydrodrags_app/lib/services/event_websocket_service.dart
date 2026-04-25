@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../utils/api_error_logger.dart';
+
 /// Connects to the event WebSocket and streams decoded JSON payloads.
 /// Call [connect] with the event WS URL; listen to [messages]. Call [disconnect] when done.
 class EventWebSocketService {
@@ -56,9 +58,10 @@ class EventWebSocketService {
         cancelOnError: false,
       );
       _startKeepalive();
-    } catch (e) {
+    } catch (e, stack) {
+      logApiError(e, stack, 'WS connect');
       print('=== WS connect error === $e');
-      if (!_controller.isClosed) _controller.addError(e, StackTrace.current);
+      if (!_controller.isClosed) _controller.addError(e, stack);
     }
   }
 
