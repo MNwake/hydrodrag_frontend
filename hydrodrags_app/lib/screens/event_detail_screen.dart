@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:add_2_calendar/add_2_calendar.dart' as add2cal;
 import '../models/event.dart';
 import '../models/event_registration_list_item.dart';
+import '../models/event_result.dart';
 import '../models/racer_profile.dart';
 import '../screens/racer_profile_detail_screen.dart';
 import '../services/event_service.dart';
@@ -32,10 +33,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
   bool _isLoadingRacers = false;
   bool _racersLoaded = false;
   bool _isLoadingEvent = true;
+  List<EventResultItem> _eventResults = [];
+  String? _eventResultsFormat;
+  bool _isLoadingResults = false;
+  bool _resultsLoaded = false;
   final ImageCacheService _imageCache = ImageCacheService();
   late TabController _tabController;
   /// Class keys that are collapsed in the Racers tab (default: all collapsed).
   final Set<String> _collapsedClassKeys = {};
+  /// Class keys collapsed in the Results tab (default: all expanded).
+  final Set<String> _collapsedResultClassKeys = {};
 
   /// Current event to display: fresh from API when available, else the one passed in.
   Event get _currentEvent => _event ?? widget.event;
@@ -47,6 +54,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
     _tabController.addListener(_onTabChanged);
     _loadEvent();
     _loadEventRegistrations();
+    if (widget.event.eventStatus == EventStatus.completed) {
+      _loadEventResults();
+    }
   }
 
   Future<void> _loadEvent() async {
@@ -60,6 +70,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
           _event = updated;
           _isLoadingEvent = false;
         });
+        if (updated?.eventStatus == EventStatus.completed) {
+          _loadEventResults();
+        }
       }
     } catch (e) {
       ErrorHandlerService.logError(e, context: 'Load Event');
@@ -80,7 +93,45 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
   }
 
   void _onTabChanged() {
+    if (_tabController.index == 4 && !_resultsLoaded) {
+      _loadEventResults();
+    }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadEventResults() async {
+    if (_resultsLoaded || _isLoadingResults) return;
+    if (_currentEvent.eventStatus != EventStatus.completed) {
+      _resultsLoaded = true;
+      return;
+    }
+
+    setState(() {
+      _isLoadingResults = true;
+    });
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final eventService = EventService(authService);
+      final response = await eventService.getEventResults(_currentEvent.id);
+
+      if (mounted) {
+        setState(() {
+          _eventResults = response.results;
+          _eventResultsFormat = response.format;
+          _isLoadingResults = false;
+          _resultsLoaded = true;
+        });
+      }
+    } catch (e) {
+      ErrorHandlerService.logError(e, context: 'Load Event Results');
+      if (mounted) {
+        setState(() {
+          _isLoadingResults = false;
+        });
+        ErrorHandlerService.showError(context, e);
+      }
+    }
   }
 
   Future<void> _loadEventRegistrations() async {
@@ -663,18 +714,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
   }
 
   Future<void> _addEventToCalendar(BuildContext context) async {
-    if (kDebugMode) {
-      print('[Add2Calendar] _addEventToCalendar called');
-    }
     final event = _currentEvent;
     final start = event.startDate;
     final end = event.endDate ?? start.add(const Duration(hours: 1));
     final description = _buildCalendarEventDescription(event);
     final location = event.location.displayString;
 
-    if (kDebugMode) {
-      print('[Add2Calendar] Building event: title=${event.name}, start=$start, end=$end');
-    }
     try {
       final calEvent = add2cal.Event(
         title: event.name,
@@ -683,19 +728,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
         startDate: start,
         endDate: end,
       );
-      if (kDebugMode) {
-        print('[Add2Calendar] Calling Add2Calendar.addEvent2Cal...');
-      }
       await add2cal.Add2Calendar.addEvent2Cal(calEvent);
-      if (kDebugMode) {
-        print('[Add2Calendar] addEvent2Cal completed successfully');
-      }
     } on MissingPluginException catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('[Add2Calendar] MissingPluginException: ${e.message}');
-        print('[Add2Calendar] StackTrace: $stackTrace');
-      }
-      // Native calendar not available (simulator, desktop, web) — do not open browser
+      // Native calendar not available (simulator, desktop, web)
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -706,11 +741,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
         ),
       );
     } catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('[Add2Calendar] Caught exception: $e');
-        print('[Add2Calendar] Type: ${e.runtimeType}');
-        print('[Add2Calendar] StackTrace: $stackTrace');
-      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not add to calendar: $e')),
@@ -1029,19 +1059,303 @@ class _EventDetailScreenState extends State<EventDetailScreen> with SingleTicker
 
   Widget _buildResultsSection(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    if (_currentEvent.eventStatus != EventStatus.completed) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel(theme, Icons.emoji_events, 'Results'),
+          const SizedBox(height: 8),
+          Text(
+            'Results will be posted after the event concludes.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionLabel(theme, Icons.emoji_events, 'Results'),
-        const SizedBox(height: 8),
-        Text(
-          'Results will be posted after the event concludes.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
+        const SizedBox(height: 12),
+        if (_isLoadingResults)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_eventResults.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n?.noResultsAvailable ?? 'No results available yet',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: _isLoadingResults
+                      ? null
+                      : () {
+                          _resultsLoaded = false;
+                          _loadEventResults();
+                        },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          )
+        else
+          _buildResultsByClass(theme),
       ],
+    );
+  }
+
+  Widget _buildResultsByClass(ThemeData theme) {
+    final byClass = <String, List<EventResultItem>>{};
+    for (final result in _eventResults) {
+      final key = result.classKey.isNotEmpty ? result.classKey : result.className;
+      byClass.putIfAbsent(key, () => []).add(result);
+    }
+
+    final List<String> classOrder;
+    if (_currentEvent.classes.isEmpty) {
+      classOrder = byClass.keys.toList()..sort();
+    } else {
+      classOrder = _currentEvent.classes
+          .map((c) => c.key)
+          .where(byClass.containsKey)
+          .toList();
+      classOrder.addAll(
+        byClass.keys.where((k) => !_currentEvent.classes.any((c) => c.key == k)),
+      );
+    }
+
+    final isTopSpeed = _eventResultsFormat == 'top_speed';
+    final showRecord = !isTopSpeed;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final classKey in classOrder) ...[
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (_collapsedResultClassKeys.contains(classKey)) {
+                  _collapsedResultClassKeys.remove(classKey);
+                } else {
+                  _collapsedResultClassKeys.add(classKey);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    _collapsedResultClassKeys.contains(classKey)
+                        ? Icons.expand_more
+                        : Icons.expand_less,
+                    size: 24,
+                    color: theme.colorScheme.primary,
+                  ),
+                  Icon(Icons.emoji_events, size: 20, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      byClass[classKey]!.first.className.isNotEmpty
+                          ? byClass[classKey]!.first.className
+                          : classKey,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '(${byClass[classKey]!.length})',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!_collapsedResultClassKeys.contains(classKey))
+            ...(byClass[classKey]!.asMap().entries.map((entry) {
+              final index = entry.key;
+              final result = entry.value;
+              return Column(
+                children: [
+                  if (index > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Divider(height: 1, color: theme.colorScheme.outlineVariant),
+                    ),
+                  _buildResultListItem(
+                    context,
+                    result,
+                    showRecord: showRecord,
+                    isTopSpeed: isTopSpeed,
+                  ),
+                ],
+              );
+            })),
+        ],
+      ],
+    );
+  }
+
+  String _placementLabel(int placement) {
+    if (placement <= 0) return '—';
+    final mod100 = placement % 100;
+    final mod10 = placement % 10;
+    String suffix;
+    if (mod100 >= 11 && mod100 <= 13) {
+      suffix = 'th';
+    } else if (mod10 == 1) {
+      suffix = 'st';
+    } else if (mod10 == 2) {
+      suffix = 'nd';
+    } else if (mod10 == 3) {
+      suffix = 'rd';
+    } else {
+      suffix = 'th';
+    }
+    return '$placement$suffix';
+  }
+
+  Widget _buildResultListItem(
+    BuildContext context,
+    EventResultItem result, {
+    required bool showRecord,
+    required bool isTopSpeed,
+  }) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final displayName = result.racerName.trim().isNotEmpty ? result.racerName : 'Racer';
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'R';
+    final profileImageUrl = result.profileImagePath;
+    final pwcLabel = result.pwcIdentifier.trim().isNotEmpty ? result.pwcIdentifier.trim() : '—';
+    final recordLabel = showRecord && (result.wins > 0 || result.losses > 0)
+        ? '${result.wins}W-${result.losses}L'
+        : null;
+    final speedLabel = result.topSpeed > 0
+        ? '${result.topSpeed.toStringAsFixed(1)} mph'
+        : '--';
+    final subtitleLabel = isTopSpeed
+        ? (result.placement == 1
+            ? (l10n?.topSpeedLeader ?? 'Fastest')
+            : (pwcLabel != '—' ? pwcLabel : null))
+        : recordLabel;
+    final trailingLabel = isTopSpeed ? speedLabel : pwcLabel;
+
+    return InkWell(
+      onTap: result.racerId.isEmpty
+          ? null
+          : () async {
+              final authService = Provider.of<AuthService>(context, listen: false);
+              final racerService = RacerService(authService);
+              final profile = await racerService.getRacerById(result.racerId);
+              if (!context.mounted) return;
+              if (profile != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => RacerProfileDetailScreen(racer: profile),
+                  ),
+                );
+              }
+            },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              child: Text(
+                _placementLabel(result.placement),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: result.placement <= 3
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(width: 8),
+            FutureBuilder<File?>(
+              future: profileImageUrl != null && profileImageUrl.isNotEmpty
+                  ? _imageCache.getCachedImage(profileImageUrl, updatedAt: null)
+                  : Future.value(null),
+              builder: (context, snapshot) {
+                return CircleAvatar(
+                  radius: 22,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  backgroundImage: snapshot.hasData && snapshot.data != null
+                      ? FileImage(snapshot.data!)
+                      : null,
+                  child: snapshot.data == null
+                      ? Text(
+                          initials,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
+                );
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitleLabel != null)
+                    Text(
+                      subtitleLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isTopSpeed && result.placement == 1
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              trailingLabel,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

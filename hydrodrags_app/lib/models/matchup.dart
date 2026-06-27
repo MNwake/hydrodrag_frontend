@@ -10,6 +10,9 @@ class MatchupBase {
   final String bracket;
   final int seedA;
   final int? seedB;
+  /// True when this solo row is a fair bye (auto-advance), not awaiting an opponent.
+  final bool isBye;
+  final bool opponentPending;
 
   MatchupBase({
     required this.matchupId,
@@ -19,6 +22,8 @@ class MatchupBase {
     required this.bracket,
     required this.seedA,
     this.seedB,
+    this.isBye = false,
+    this.opponentPending = false,
   });
 
   factory MatchupBase.fromJson(Map<String, dynamic> json) {
@@ -35,6 +40,8 @@ class MatchupBase {
       bracket: json['bracket'] as String? ?? 'W',
       seedA: (json['seed_a'] as num?)?.toInt() ?? 0,
       seedB: (json['seed_b'] as num?)?.toInt(),
+      isBye: json['is_bye'] as bool? ?? false,
+      opponentPending: json['opponent_pending'] as bool? ?? false,
     );
   }
 
@@ -55,6 +62,11 @@ class MatchupBase {
   String get nameA => racerA?.displayName ?? '—';
   String get nameB => racerB?.displayName ?? '—';
 
+  String get pwcIdA => racerA?.pwcIdentifier.trim() ?? '';
+  String get pwcIdB => racerB?.pwcIdentifier.trim() ?? '';
+
   bool get isWinnerA => hasWinner && winner?.id == racerA?.id;
   bool get isWinnerB => hasWinner && winner?.id == racerB?.id;
+
+  bool get isSoloSlot => racerB == null;
 }

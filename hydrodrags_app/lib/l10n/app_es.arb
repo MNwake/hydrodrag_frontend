@@ -22,6 +22,8 @@
   "invalidCode": "Código inválido. Por favor intente de nuevo",
   "resendCode": "Reenviar Código",
   "didntReceiveCode": "¿No recibiste el código?",
+  "resendCodeDialogTitle": "¿Reenviar código de verificación?",
+  "resendCodeDialogMessage": "Revise su carpeta de spam o correo no deseado antes de solicitar un código nuevo. Los correos de verificación a veces se filtran allí.",
   "codeExpired": "Código expirado. Por favor solicite uno nuevo",
   "verify": "Verificar",
   "verifying": "Verificando...",
@@ -248,8 +250,21 @@
   "@addPWC": {
     "description": "Botón para agregar un nuevo PWC"
   },
-  "pwcName": "Nombre del PWC",
-  "pwcNameHint": "Ingrese un nombre para su PWC",
+  "pwcName": "Número de corredor del PWC",
+  "pwcNameHint": "Ingrese el número de corredor de su PWC (solo dígitos)",
+  "pwcRacerNumberDigitsOnly": "Solo se permiten dígitos (al menos un dígito)",
+  "@pwcRacerNumberDigitsOnly": {
+    "description": "Validación cuando el número de corredor del PWC no es solo dígitos"
+  },
+  "pwcRacerNumberDisplay": "PWC corredor n.º: {number}",
+  "@pwcRacerNumberDisplay": {
+    "description": "Línea de subtítulo con el número de corredor del PWC en una inscripción",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "editPWC": "Editar PWC",
   "@editPWC": {
     "description": "Título para editar un PWC"
@@ -309,6 +324,22 @@
   "continueOffline": "Continuar sin conexión",
   "@continueOffline": {
     "description": "Botón para continuar sin servidor (ej. cerrar sesión)"
+  },
+  "updateAvailableTitle": "Actualización disponible",
+  "@updateAvailableTitle": {
+    "description": "Título del diálogo de actualización de la app"
+  },
+  "updateAvailableMessage": "Hay una nueva versión de HydroDrags disponible.",
+  "@updateAvailableMessage": {
+    "description": "Mensaje introductorio del diálogo de actualización"
+  },
+  "updateButton": "Actualizar",
+  "@updateButton": {
+    "description": "Botón para abrir la tienda de aplicaciones"
+  },
+  "updateLaterButton": "Más tarde",
+  "@updateLaterButton": {
+    "description": "Botón para cerrar el diálogo de actualización opcional"
   },
   "selectMake": "Seleccionar Marca",
   "@selectMake": {
@@ -471,6 +502,10 @@
   "@continueToWaiver": {
     "description": "Texto del botón para proceder a la renuncia"
   },
+  "continueToCheckout": "Continuar al pago",
+  "@continueToCheckout": {
+    "description": "Texto del botón para ir al pago cuando la renuncia ya está firmada"
+  },
   "completePayment": "Completar Pago",
   "@completePayment": {
     "description": "Texto del botón para completar el pago"
@@ -554,8 +589,8 @@
   "spectatorDayPasses": "Pases de día adicionales (entradas de espectador)",
   "spectatorDayPassesDescription": "Compre pases de día adicionales para espectadores antes de pagar.",
   "dayPassesQuantity": "Cantidad de pases de día",
-  "spectatorSingleDayPass": "Pase de un día ($30)",
-  "spectatorWeekendPass": "Pase de fin de semana ($40)",
+  "spectatorSingleDayPass": "Pase de un día",
+  "spectatorWeekendPass": "Pase de fin de semana",
   "classesAndPwc": "Clases y PWC",
   "checkout": "Pago",
   "orderSummary": "Resumen del Pedido",
@@ -582,6 +617,10 @@
   "spectatorTicketLookupByPhone": "Las entradas se pueden consultar por su número de teléfono en la puerta.",
   "spectatorTicketsEmailedNote": "Sus entradas han sido enviadas por correo electrónico. Si no las ve, revise su carpeta de correo no deseado o spam.",
   "spectatorTicketCompleteNote": "¡Le hemos enviado sus entradas por correo! Si no están en su bandeja de entrada, revise la carpeta de correo no deseado o spam. También puede tomar una captura de pantalla de las entradas a continuación, mostrar esta pantalla en la puerta o pedir al personal que las busque por número de teléfono.",
+  "rulesTab": "Reglas",
+  "@rulesTab": {
+    "description": "Etiqueta de navegación inferior para la pestaña de reglas"
+  },
   "bracketsTab": "Llaves",
   "resultsTab": "Resultados",
   "noBracketsAvailable": "Aún no hay llaves disponibles",
@@ -594,5 +633,39 @@
   "speedSessionEnded": "Sesión finalizada",
   "speedSessionRemaining": "Tiempo restante",
   "speedSessionNotStarted": "Sesión no iniciada",
-  "speedSessionActive": "Sesión en curso"
+  "speedSessionActive": "Sesión en curso",
+  "idCaptureFrontTitle": "Identificación — Frente",
+  "idCaptureBackTitle": "Identificación — Reverso",
+  "idCaptureInstructionPrimary": "Coloque su identificación dentro del marco",
+  "idCaptureFrontInstructionPrimary": "Tome una foto del frente de su identificación oficial",
+  "idCaptureBackInstructionPrimary": "Tome una foto del reverso de su identificación oficial",
+  "idCaptureFrontSideLabel": "FRENTE",
+  "idCaptureBackSideLabel": "REVERSO",
+  "idCaptureInstructionSecondary": "Ajuste su identificación dentro del marco · Mantenga las esquinas visibles · Evite el brillo",
+  "idCaptureBlurMessage": "Esta imagen parece borrosa. Por favor, tome la foto de nuevo.",
+  "idCaptureGlareMessage": "Se detectó brillo excesivo. Mueva la identificación o cambie la iluminación.",
+  "idCaptureOcrMessage": "No pudimos leer claramente su identificación. Por favor, tome la foto de nuevo.",
+  "idCaptureUsePhoto": "Usar foto",
+  "idCaptureRetake": "Repetir",
+  "idCaptureValidating": "Verificando calidad…",
+  "idCaptureUploading": "Subiendo…",
+  "idCaptureSkipBack": "Omitir reverso (opcional)",
+  "selfieCaptureTitle": "Verificación con selfie",
+  "selfieInstructionPrimary": "Centre su rostro dentro del marco",
+  "selfieInstructionSecondary": "Mire directamente a la cámara",
+  "selfieRemoveAccessoriesHint": "Quítese gafas de sol o sombreros",
+  "selfieFeedbackNoFace": "Centre su rostro dentro del marco",
+  "selfieFeedbackMoveCloser": "Acérquese",
+  "selfieFeedbackMoveFarther": "Aléjese",
+  "selfieFeedbackCenterFace": "Centre su rostro",
+  "selfieFeedbackNotFullyVisible": "Mantenga todo el rostro visible",
+  "selfieFeedbackReady": "Quédese quieto…",
+  "selfieBlurMessage": "Su selfie parece borrosa. Por favor, tómela de nuevo.",
+  "selfieTooDarkMessage": "Aumente la iluminación e intente de nuevo.",
+  "selfieTooBrightMessage": "Hay demasiada luz. Ajuste la iluminación e intente de nuevo.",
+  "selfieNoFaceMessage": "No se pudo detectar su rostro. Por favor, tome el selfie de nuevo.",
+  "selfieMultipleFacesMessage": "Se detectaron varios rostros. Solo usted debe aparecer en la foto.",
+  "selfieFaceSizeMessage": "Acérquese o aléjese para que su rostro llene el marco.",
+  "selfieValidating": "Verificando selfie…",
+  "selfieUploading": "Subiendo selfie…"
 }

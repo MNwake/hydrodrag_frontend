@@ -11,9 +11,11 @@ export interface MatchupBase {
 	racer_a: string; // registration ID
 	racer_b: string | null; // registration ID or null for bye
 	winner: string | null; // registration ID or null
-	bracket: string; // "W" = winner bracket, "L" = loser bracket
+	bracket: string; // "W" | "L" | "C" (championship / grand finals)
 	seed_a: number;
 	seed_b: number | null; // null for bye
+	/** True when losers bracket is waiting for a second 1-loss racer (not a bye). */
+	opponent_pending?: boolean;
 }
 
 export interface RoundBase {
@@ -36,6 +38,8 @@ export interface MatchupUpdate {
 	racer_a?: string;
 	racer_b?: string | null;
 	winner?: string | null;
+	/** Set when filling a pending opponent slot (optional; server defaults to seed_a + 1). */
+	seed_b?: number | null;
 }
 
 /** GET /admin/events/{event_id}/matchups?class_key={class_key} */

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../config/api_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/event.dart';
+import '../models/event_registration_list_item.dart';
 import '../models/matchup.dart';
 import '../models/round.dart';
 import '../models/speed_ranking.dart';
@@ -12,8 +13,8 @@ import '../services/auth_service.dart';
 import '../services/event_service.dart';
 import '../services/error_handler_service.dart';
 import '../services/event_websocket_service.dart';
+import '../utils/app_log.dart';
 import '../widgets/bracket_column.dart';
-import '../widgets/language_toggle.dart';
 
 /// A class option for the dropdown (event's racing class).
 class _ClassOption {
@@ -21,6 +22,13 @@ class _ClassOption {
 
   final String classKey;
   final String displayName;
+}
+
+class _UnscoredRacer {
+  const _UnscoredRacer({required this.registrationId, required this.racerName});
+
+  final String registrationId;
+  final String racerName;
 }
 
 class LiveBracketsTabScreen extends StatefulWidget {
@@ -40,6 +48,10 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
   String? _selectedClassKey;
   List<RoundBase> _rounds = [];
   SpeedSession? _speedSession;
+  Map<String, List<EventRegistrationListItem>> _registrationsByClass = {};
+  Map<String, List<_UnscoredRacer>> _wsUnscoredByClass = {};
+  /// Latest connect snapshot; applied when class is selected after connect.
+  Map<String, dynamic>? _pendingEventSnapshot;
   /// Live countdown for top-speed session; synced from API on refresh.
   int? _displayRemainingSeconds;
   Timer? _countdownTimer;
@@ -49,6 +61,7 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
   String? _connectedEventId;
   bool _isLoadingEvents = true;
   bool _isLoadingBrackets = false;
+  bool _isLoadingRegistrations = false;
   String? _error;
 
   List<_ClassOption> get _classOptions {
@@ -77,6 +90,35 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
           final t = roundTemplate[roundNum]!;
           return RoundBase(
             id: '${t.id}_w',
+            eventId: t.eventId,
+            classKey: t.classKey,
+            roundNumber: roundNum,
+            matchups: byRound[roundNum]!,
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt,
+            isComplete: t.isComplete,
+          );
+        })
+        .toList()
+      ..sort((a, b) => a.roundNumber.compareTo(b.roundNumber));
+  }
+
+  /// Championship (grand finals): bracket "C" — head-to-head until someone has two losses.
+  List<RoundBase> get _championshipRounds {
+    final byRound = <int, List<MatchupBase>>{};
+    final roundTemplate = <int, RoundBase>{};
+    for (final r in _rounds) {
+      roundTemplate[r.roundNumber] ??= r;
+      for (final m in r.matchups) {
+        if (m.bracket.toUpperCase() != 'C') continue;
+        byRound.putIfAbsent(r.roundNumber, () => []).add(m);
+      }
+    }
+    return byRound.keys
+        .map((roundNum) {
+          final t = roundTemplate[roundNum]!;
+          return RoundBase(
+            id: '${t.id}_c',
             eventId: t.eventId,
             classKey: t.classKey,
             roundNumber: roundNum,
@@ -138,22 +180,23 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     // they switch away — keep the connection so we still receive broadcasts and
     // the view is up to date when they return.
     if (widget.isTabSelected && !oldWidget.isTabSelected) {
-      _connectEventWebSocket();
+      _connectEventWebSocket(forceReconnect: true);
     }
   }
 
-  void _connectEventWebSocket() {
+  void _connectEventWebSocket({bool forceReconnect = false}) {
     if (!widget.isTabSelected) return;
     final event = _selectedEvent;
     if (event == null) return;
-    // Already connected to this event — don't disconnect/reconnect (avoids dropping broadcasts).
-    if (_connectedEventId == event.id && _eventWsService != null) {
+    if (!forceReconnect &&
+        _connectedEventId == event.id &&
+        _eventWsService != null) {
       return;
     }
     _disconnectEventWebSocket();
     _connectedEventId = event.id;
     final wsUrl = ApiConfig.eventWebSocketUrl(event.id);
-    print('=== Results WS: connecting to event ${event.id} (${event.name}) ===');
+    AppLog.debug('LiveBrackets', 'Connecting to event stream');
     _eventWsService = EventWebSocketService();
     _eventWsService!.connect(wsUrl);
     _wsSubscription = _eventWsService!.messages.listen(_onWsMessage);
@@ -161,7 +204,7 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
 
   void _disconnectEventWebSocket() {
     if (_eventWsService != null || _wsSubscription != null) {
-      print('=== Results WS: disconnecting (was event $_connectedEventId) ===');
+      AppLog.debug('LiveBrackets', 'Disconnecting from event stream');
     }
     _connectedEventId = null;
     _wsSubscription?.cancel();
@@ -179,26 +222,22 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
       final selectedId = _selectedEvent?.id;
       final selectedClass = _selectedClassKey;
 
-      print(
-        '=== Results WS message === type=$type event_id=$eventId class_key=$classKey '
-        '| selected event=$selectedId class=$selectedClass',
-      );
-
       if (eventId != selectedId) {
-        print('=== Results WS skip: event_id mismatch ===');
         return;
       }
       if (type != 'brackets_update' && type != 'speed_session_update') {
+        if (type == 'event_snapshot') {
+          _applyEventSnapshot(msg);
+        }
         return;
       }
 
       if (type == 'brackets_update') {
         if (selectedClass == null || classKey != selectedClass) {
-          print('=== Results WS skip: class_key mismatch (brackets) ===');
           return;
         }
         final roundsList = msg['rounds'] as List<dynamic>? ?? [];
-        print('=== Results WS applying brackets_update rounds=${roundsList.length} ===');
+        AppLog.debug('LiveBrackets', 'Applying brackets update');
         setState(() {
           _rounds = roundsList
               .map((r) => RoundBase.fromJson(r as Map<String, dynamic>))
@@ -206,34 +245,115 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
         });
       } else if (type == 'speed_session_update') {
         if (selectedClass == null || classKey != selectedClass) {
-          print('=== Results WS skip: class_key mismatch (speed) selectedClass=$selectedClass classKey=$classKey ===');
           return;
         }
-        final payload = msg;
-        final updated = SpeedSession.fromWebSocketUpdate(
-          eventId!,
-          classKey is String ? classKey as String : selectedClass!,
-          payload,
-          existing: _speedSession,
+        AppLog.debug('LiveBrackets', 'Applying speed session update');
+        _applySpeedClassPayload(
+          eventId: eventId!,
+          classKey: classKey is String ? classKey as String : selectedClass!,
+          payload: msg,
         );
-        print(
-          '=== Results WS applying speed_session_update remaining=${updated.remainingSeconds} '
-          'rankings=${updated.rankings.length} ===',
-        );
-        setState(() {
-          _speedSession = updated;
-          if (updated.isActive && updated.remainingSeconds != null) {
-            _displayRemainingSeconds = updated.remainingSeconds;
-            _startCountdownTimer();
-          } else {
-            _stopCountdownTimer();
-          }
-        });
       }
     } catch (e, st) {
-      print('=== Results WS _onWsMessage error === $e');
-      print(st);
+      AppLog.error(
+        'LiveBrackets',
+        'Failed to process WebSocket message',
+        error: e,
+        stackTrace: st,
+        recoverable: true,
+      );
     }
+  }
+
+  void _applyEventSnapshot(Map<String, dynamic> msg) {
+    AppLog.debug('LiveBrackets', 'Applying event snapshot');
+    _pendingEventSnapshot = msg;
+    _applyPendingSnapshotForSelectedClass();
+  }
+
+  List<_UnscoredRacer> _parseUnscoredList(List<dynamic> raw) {
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (entry) => _UnscoredRacer(
+            registrationId: entry['registration_id'] as String? ?? '',
+            racerName: entry['racer_name'] as String? ?? 'Racer',
+          ),
+        )
+        .where((entry) => entry.registrationId.isNotEmpty)
+        .toList();
+  }
+
+  void _applySpeedClassPayload({
+    required String eventId,
+    required String classKey,
+    required Map<String, dynamic> payload,
+  }) {
+    final unscoredRaw = payload['unscored'] as List<dynamic>? ?? const [];
+    final updated = SpeedSession.fromWebSocketUpdate(
+      eventId,
+      classKey,
+      payload,
+      existing: payload['reset'] == true ? null : _speedSession,
+    );
+    setState(() {
+      if (unscoredRaw.isNotEmpty || payload.containsKey('unscored')) {
+        _wsUnscoredByClass = {
+          ..._wsUnscoredByClass,
+          classKey: _parseUnscoredList(unscoredRaw),
+        };
+      }
+      _speedSession = updated;
+      if (updated.remainingSeconds != null) {
+        _displayRemainingSeconds = updated.remainingSeconds;
+      } else if (payload['reset'] == true) {
+        _displayRemainingSeconds = updated.durationSeconds > 0
+            ? updated.durationSeconds
+            : null;
+      }
+      if (updated.isActive && updated.remainingSeconds != null) {
+        _startCountdownTimer();
+      } else {
+        _stopCountdownTimer(clearDisplay: false);
+      }
+    });
+  }
+
+  void _applyPendingSnapshotForSelectedClass() {
+    final snapshot = _pendingEventSnapshot;
+    final selectedClass = _selectedClassKey;
+    final eventId = _selectedEvent?.id ?? snapshot?['event_id'] as String?;
+    if (snapshot == null || selectedClass == null || eventId == null) return;
+
+    final speedSessions = snapshot['speed_sessions'] as List<dynamic>? ?? const [];
+    final unscoredByClass = <String, List<_UnscoredRacer>>{};
+
+    for (final raw in speedSessions) {
+      if (raw is! Map<String, dynamic>) continue;
+      final classKey = raw['class_key'] as String?;
+      if (classKey == null || classKey.isEmpty) continue;
+      final unscored = raw['unscored'] as List<dynamic>? ?? const [];
+      unscoredByClass[classKey] = _parseUnscoredList(unscored);
+    }
+
+    Map<String, dynamic>? selectedSnapshot;
+    for (final raw in speedSessions) {
+      if (raw is Map<String, dynamic> && raw['class_key'] == selectedClass) {
+        selectedSnapshot = raw;
+        break;
+      }
+    }
+
+    if (selectedSnapshot == null) return;
+
+    setState(() {
+      _wsUnscoredByClass = {..._wsUnscoredByClass, ...unscoredByClass};
+    });
+    _applySpeedClassPayload(
+      eventId: eventId,
+      classKey: selectedClass,
+      payload: selectedSnapshot,
+    );
   }
 
   void _startCountdownTimer() {
@@ -248,10 +368,12 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     });
   }
 
-  void _stopCountdownTimer() {
+  void _stopCountdownTimer({bool clearDisplay = true}) {
     _countdownTimer?.cancel();
     _countdownTimer = null;
-    _displayRemainingSeconds = null;
+    if (clearDisplay) {
+      _displayRemainingSeconds = null;
+    }
   }
 
   Future<void> _loadEvents() async {
@@ -274,9 +396,10 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
             _selectedEvent = first;
             _selectedClassKey = first.classes.isNotEmpty ? first.classes.first.key : null;
             _loadResults(first, _selectedClassKey);
+            _loadEventRegistrations(first.id);
           }
         });
-        if (widget.isTabSelected) _connectEventWebSocket();
+        if (widget.isTabSelected) _connectEventWebSocket(forceReconnect: true);
       }
     } catch (e) {
       ErrorHandlerService.logError(e, context: 'Load Events');
@@ -375,14 +498,42 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     setState(() {
       _selectedEvent = event;
       _selectedClassKey = firstClassKey;
+      _registrationsByClass = {};
+      _wsUnscoredByClass = {};
+      _pendingEventSnapshot = null;
+      _speedSession = null;
     });
     _loadResults(event, firstClassKey);
-    if (widget.isTabSelected) _connectEventWebSocket();
+    _loadEventRegistrations(event.id);
+    if (widget.isTabSelected) _connectEventWebSocket(forceReconnect: true);
+  }
+
+  Future<void> _loadEventRegistrations(String eventId) async {
+    setState(() => _isLoadingRegistrations = true);
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final eventService = EventService(authService);
+      final registrations = await eventService.getEventRegistrations(eventId);
+      if (!mounted) return;
+
+      final byClass = <String, List<EventRegistrationListItem>>{};
+      for (final reg in registrations) {
+        byClass.putIfAbsent(reg.classKey, () => []).add(reg);
+      }
+      setState(() {
+        _registrationsByClass = byClass;
+        _isLoadingRegistrations = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingRegistrations = false);
+    }
   }
 
   void _onClassSelected(_ClassOption? option) {
     if (option == null || _selectedEvent == null) return;
     setState(() => _selectedClassKey = option.classKey);
+    _applyPendingSnapshotForSelectedClass();
     _loadResults(_selectedEvent, option.classKey);
   }
 
@@ -392,22 +543,15 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n?.resultsTab ?? 'Results'),
-        actions: const [
-          LanguageToggle(isCompact: true),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: _isLoadingEvents
+      body: SafeArea(
+        child: _isLoadingEvents
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _rounds.isEmpty && _speedSession == null && !_isLoadingBrackets
               ? _buildError(theme)
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildEventSelector(theme),
-                    if (_selectedEvent != null) _buildClassSelector(theme),
+                    _buildEventAndClassFilters(theme),
                     if (_selectedEvent != null && _isLoadingBrackets)
                       const Padding(
                         padding: EdgeInsets.all(24),
@@ -425,7 +569,9 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
                       )
                     else if (_selectedEvent != null && _rounds.isNotEmpty)
                       Expanded(
-                        child: _buildBracketContent(theme, l10n),
+                        child: ClipRect(
+                          child: _buildBracketContent(theme, l10n),
+                        ),
                       )
                     else
                       Expanded(
@@ -440,94 +586,188 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
                       ),
                   ],
                 ),
+      ),
     );
   }
 
-  Widget _buildEventSelector(ThemeData theme) {
+  Widget _filterChip({
+    required ThemeData theme,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    final interactive = onTap != null;
     return Material(
-      color: theme.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Row(
+      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: interactive
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              if (interactive) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEventPicker(ThemeData theme) async {
+    final picked = await showModalBottomSheet<Event>(
+      context: context,
+      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Event:',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'Select event',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<Event>(
-                value: _selectedEvent,
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                items: _events
-                    .map((e) => DropdownMenuItem<Event>(
-                          value: e,
-                          child: Text(
-                            e.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (Event? value) => _onEventSelected(value),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _events.length,
+                itemBuilder: (context, index) {
+                  final event = _events[index];
+                  final selected = _selectedEvent?.id == event.id;
+                  return ListTile(
+                    title: Text(event.name),
+                    trailing: selected
+                        ? Icon(Icons.check_rounded, color: theme.colorScheme.primary)
+                        : null,
+                    selected: selected,
+                    onTap: () => Navigator.pop(ctx, event),
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
     );
+    if (picked != null) _onEventSelected(picked);
   }
 
-  Widget _buildClassSelector(ThemeData theme) {
+  Future<void> _showClassPicker(ThemeData theme) async {
     final options = _classOptions;
-    if (options.isEmpty) return const SizedBox.shrink();
+    if (options.length <= 1) return;
+
+    final picked = await showModalBottomSheet<_ClassOption>(
+      context: context,
+      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        final maxSheetHeight = MediaQuery.sizeOf(ctx).height * 0.55;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxSheetHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    'Select class',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final option in options)
+                        ListTile(
+                          title: Text(option.displayName),
+                          trailing: option.classKey == _selectedClassKey
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  color: theme.colorScheme.primary,
+                                )
+                              : null,
+                          selected: option.classKey == _selectedClassKey,
+                          onTap: () => Navigator.pop(ctx, option),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked != null) _onClassSelected(picked);
+  }
+
+  Widget _buildEventAndClassFilters(ThemeData theme) {
+    final options = _classOptions;
+    final selectedClass = options.isEmpty
+        ? null
+        : options.any((o) => o.classKey == _selectedClassKey)
+            ? options.firstWhere((o) => o.classKey == _selectedClassKey)
+            : options.first;
 
     return Material(
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Row(
           children: [
-            Text(
-              'Class:',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
-              child: DropdownButtonFormField<_ClassOption>(
-                value: options.any((o) => o.classKey == _selectedClassKey)
-                    ? options.firstWhere((o) => o.classKey == _selectedClassKey)
-                    : options.first,
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                items: options
-                    .map((o) => DropdownMenuItem<_ClassOption>(
-                          value: o,
-                          child: Text(
-                            o.displayName,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ))
-                    .toList(),
-                onChanged: options.length > 1 ? _onClassSelected : null,
+              flex: 3,
+              child: _filterChip(
+                theme: theme,
+                label: _selectedEvent?.name ?? 'Select event',
+                onTap: _events.isEmpty ? null : () => _showEventPicker(theme),
               ),
             ),
+            if (_selectedEvent != null && selectedClass != null) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: _filterChip(
+                  theme: theme,
+                  label: selectedClass.displayName,
+                  onTap: options.length > 1 ? () => _showClassPicker(theme) : null,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -598,39 +838,57 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     );
   }
 
+  Map<String, String> get _pwcByRegistrationId {
+    final classKey = _selectedClassKey ?? '';
+    final regs = _registrationsByClass[classKey] ?? const <EventRegistrationListItem>[];
+    return {
+      for (final reg in regs)
+        if (reg.pwcIdentifier.trim().isNotEmpty) reg.id: reg.pwcIdentifier.trim(),
+    };
+  }
+
   Widget _buildBracketContent(ThemeData theme, AppLocalizations? l10n) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_winnersRounds.isNotEmpty)
-            BracketColumn(
-              rounds: _winnersRounds,
-              title: 'Winners Bracket',
-              isLosers: false,
-            ),
-          if (_winnersRounds.isNotEmpty && _losersRounds.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            Divider(
-              color: theme.colorScheme.outline.withOpacity(0.5),
-              thickness: 1.5,
-              indent: 0,
-              endIndent: 0,
-            ),
-            const SizedBox(height: 24),
-            BracketColumn(
-              rounds: _losersRounds,
-              title: 'Losers Bracket',
-              isLosers: true,
-            ),
-          ] else if (_losersRounds.isNotEmpty)
-            BracketColumn(
-              rounds: _losersRounds,
-              title: 'Losers Bracket',
-              isLosers: true,
-            ),
-        ],
+    final pwcLookup = _pwcByRegistrationId;
+
+    return BracketZoomableView(
+      scrollHeader: const Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: DoubleEliminationBracketHeader(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_winnersRounds.isNotEmpty)
+              BracketColumn(
+                rounds: _winnersRounds,
+                title: "Winner's Bracket",
+                isLosers: false,
+                pwcByRegistrationId: pwcLookup,
+              ),
+            if (_winnersRounds.isNotEmpty && _losersRounds.isNotEmpty)
+              const SizedBox(height: 16),
+            if (_losersRounds.isNotEmpty)
+              BracketColumn(
+                rounds: _losersRounds,
+                title: "Loser's Bracket",
+                isLosers: true,
+                pwcByRegistrationId: pwcLookup,
+              ),
+            if (_championshipRounds.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              BracketColumn(
+                rounds: _championshipRounds,
+                title: 'Championship',
+                isLosers: false,
+                pwcByRegistrationId: pwcLookup,
+              ),
+            ],
+            const DoubleEliminationBracketFooter(),
+          ],
+        ),
       ),
     );
   }
@@ -640,6 +898,20 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     final rankings = session.rankings;
     final eventId = _selectedEvent!.id;
     final classKey = _selectedClassKey ?? '';
+    final classRegistrations = _registrationsByClass[classKey] ?? const <EventRegistrationListItem>[];
+    final wsUnscored = _wsUnscoredByClass[classKey] ?? const <_UnscoredRacer>[];
+    final registrationNameById = <String, String>{
+      for (final reg in classRegistrations)
+        reg.id: reg.racerModel?.fullName ?? 'Racer',
+      for (final entry in wsUnscored) entry.registrationId: entry.racerName,
+    };
+    final registrationPwcById = <String, String>{
+      for (final reg in classRegistrations)
+        if (reg.pwcIdentifier.trim().isNotEmpty) reg.id: reg.pwcIdentifier.trim(),
+    };
+    final scoredIds = rankings.map((r) => r.registrationId).toSet();
+    final unscoredRegistrations = classRegistrations.where((r) => !scoredIds.contains(r.id)).toList();
+    final unscoredFallback = wsUnscored.where((u) => !scoredIds.contains(u.registrationId)).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -666,39 +938,75 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
                   onRefresh: () async => _loadSpeedRankings(eventId, classKey),
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: rankings.length,
+                    itemCount: rankings.length + (unscoredRegistrations.isNotEmpty ? unscoredRegistrations.length : unscoredFallback.length),
               itemBuilder: (context, index) {
-                final item = rankings[index];
+                final isScored = index < rankings.length;
+                final item = isScored ? rankings[index] : null;
+                final unscored = isScored
+                    ? null
+                    : (unscoredRegistrations.isNotEmpty
+                        ? unscoredRegistrations[index - rankings.length]
+                        : null);
+                final unscoredWs = isScored
+                    ? null
+                    : (unscoredRegistrations.isEmpty
+                        ? unscoredFallback[index - rankings.length]
+                        : null);
+                final displayName = isScored
+                    ? ((item!.racerName?.trim().isNotEmpty == true)
+                        ? item.racerName!
+                        : (registrationNameById[item.registrationId] ?? item.displayName))
+                    : (unscored?.racerModel?.fullName ?? unscoredWs?.racerName ?? 'Racer');
+                final pwcLabel = isScored
+                    ? (item!.pwcIdentifier.trim().isNotEmpty
+                        ? item.pwcIdentifier.trim()
+                        : (registrationPwcById[item.registrationId] ?? '—'))
+                    : (unscored?.pwcIdentifier.trim().isNotEmpty == true
+                        ? unscored!.pwcIdentifier.trim()
+                        : '—');
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: theme.colorScheme.primaryContainer,
-                      child: Text(
-                        '${item.place}',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimaryContainer,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            pwcLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     title: Text(
-                      item.displayName,
+                      displayName,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: item.place == 1
+                    subtitle: isScored && item!.place == 1
                         ? Text(
                             l10n?.topSpeedLeader ?? 'Fastest',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.primary,
                             ),
                           )
+                        : !isScored
+                            ? Text(
+                                'Awaiting first run',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              )
                         : null,
                     trailing: Text(
-                      '${item.topSpeed.toStringAsFixed(1)} mph',
+                      isScored ? '${item!.topSpeed.toStringAsFixed(1)} mph' : '--',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -722,6 +1030,15 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
     String status;
     if (session.isStopped) {
       status = l10n?.speedSessionEnded ?? 'Session ended';
+    } else if (session.isPaused) {
+      final secs = _displayRemainingSeconds ?? session.remainingSeconds;
+      if (secs != null) {
+        final mins = secs ~/ 60;
+        final s = secs % 60;
+        status = 'Session paused: $mins:${s.toString().padLeft(2, '0')} remaining';
+      } else {
+        status = 'Session paused';
+      }
     } else if (session.isActive) {
       final secs = _displayRemainingSeconds ?? session.remainingSeconds;
       if (secs != null) {
@@ -748,6 +1065,8 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
           Icon(
             session.isStopped
                 ? Icons.check_circle_outline
+                : session.isPaused
+                    ? Icons.pause_circle_outline
                 : session.isActive
                     ? Icons.timer_outlined
                     : Icons.schedule_outlined,
@@ -768,6 +1087,10 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
   }
 
   Widget _buildEmptySpeedRankings(ThemeData theme, AppLocalizations? l10n) {
+    final classKey = _selectedClassKey ?? '';
+    final classRegistrations = _registrationsByClass[classKey] ?? const <EventRegistrationListItem>[];
+    final wsUnscored = _wsUnscoredByClass[classKey] ?? const <_UnscoredRacer>[];
+    final showNamesFromWs = classRegistrations.isEmpty && wsUnscored.isNotEmpty;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -794,6 +1117,36 @@ class _LiveBracketsTabScreenState extends State<LiveBracketsTabScreen> {
               ),
               textAlign: TextAlign.center,
             ),
+            if (_isLoadingRegistrations) ...[
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(strokeWidth: 2),
+            ] else if (classRegistrations.isNotEmpty || showNamesFromWs) ...[
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: showNamesFromWs ? wsUnscored.length : classRegistrations.length,
+                  itemBuilder: (context, index) {
+                    final name = showNamesFromWs
+                        ? wsUnscored[index].racerName
+                        : (classRegistrations[index].racerModel?.fullName ?? 'Racer');
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.person_outline),
+                      title: Text(
+                        name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Text(
+                        '--',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

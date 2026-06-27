@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { checkCredentials, setAdminLoggedIn } from '$lib/admin-auth';
+	import { tryPortalLogin, setPortalSession, isStaffLoginConfigured } from '$lib/admin-auth';
 
 	let username = '';
 	let password = '';
@@ -15,9 +15,10 @@
 			return;
 		}
 		loading = true;
-		if (checkCredentials(username.trim(), password)) {
-			setAdminLoggedIn();
-			goto('/dashboard');
+		const role = tryPortalLogin(username.trim(), password);
+		if (role) {
+			setPortalSession(role, username.trim());
+			goto(role === 'staff' ? '/events' : '/dashboard');
 		} else {
 			error = 'Invalid username or password';
 			loading = false;
@@ -28,7 +29,7 @@
 <div class="login-page">
 	<div class="login-card">
 		<h1 class="login-title">HydroDrags Admin</h1>
-		<p class="login-subtitle">Sign in with your admin credentials</p>
+		<p class="login-subtitle">Sign in with admin or staff credentials</p>
 
 		<form class="login-form" on:submit|preventDefault={handleSubmit}>
 			<label for="username">Username</label>
@@ -56,6 +57,14 @@
 
 		{#if error}
 			<p class="login-error" role="alert">{error}</p>
+		{/if}
+
+		{#if import.meta.env.DEV && !isStaffLoginConfigured()}
+			<p class="login-hint">
+				Staff login is off: add <code>VITE_STAFF_USERNAME</code> and <code>VITE_STAFF_PASSWORD</code> to
+				<code>.env.local</code> in this app folder, then restart <code>npm run dev</code>. For production, set
+				them before <code>vite build</code> (see <code>deploy_admin_frontend.py</code>).
+			</p>
 		{/if}
 	</div>
 </div>

@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
 import '../models/pwc.dart';
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 import '../models/racer_profile.dart';
+import '../models/racer_history_item.dart';
 import '../models/my_registration.dart';
 import '../models/spectator_ticket.dart';
 import 'auth_service.dart';
@@ -65,10 +67,7 @@ class RacerService {
       final decoded = utf8.decode(base64Decode(normalizedPayload));
       return jsonDecode(decoded) as Map<String, dynamic>;
     } catch (e, stack) {
-      logApiError(e, stack, 'JWT decode');
-      if (kDebugMode) {
-        print('Error decoding JWT token: $e');
-      }
+      AppLog.error('RacerService', 'Failed to decode profile token', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }
@@ -110,14 +109,6 @@ class RacerService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/me/profile-image');
       
-      if (kDebugMode) {
-        print('=== API Request: Upload Profile Image ===');
-        print('URL: $uri');
-        print('Method: POST');
-        print('Headers: {Authorization: Bearer [REDACTED]}');
-        print('File: ${imageFile.path}');
-      }
-      
       // Create multipart request
       final request = http.MultipartRequest('POST', uri);
       request.headers['Authorization'] = 'Bearer $token';
@@ -134,32 +125,16 @@ class RacerService {
       request.files.add(multipartFile);
 
       // Send request
-      final streamedResponse = await request.send();
+      final streamedResponse = await LoggedHttp.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (kDebugMode) {
-        print('=== API Response: Upload Profile Image ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('Profile image uploaded successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to upload profile image: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Upload profile image');
-      if (kDebugMode) {
-        print('Error uploading profile image: $e');
-      }
+      AppLog.error('RacerService', 'Image upload failed', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -177,14 +152,6 @@ class RacerService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/me/banner-image');
       
-      if (kDebugMode) {
-        print('=== API Request: Upload Banner Image ===');
-        print('URL: $uri');
-        print('Method: POST');
-        print('Headers: {Authorization: Bearer [REDACTED]}');
-        print('File: ${imageFile.path}');
-      }
-      
       // Create multipart request
       final request = http.MultipartRequest('POST', uri);
       request.headers['Authorization'] = 'Bearer $token';
@@ -201,32 +168,16 @@ class RacerService {
       request.files.add(multipartFile);
 
       // Send request
-      final streamedResponse = await request.send();
+      final streamedResponse = await LoggedHttp.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (kDebugMode) {
-        print('=== API Response: Upload Banner Image ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('Banner image uploaded successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to upload banner image: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Upload banner image');
-      if (kDebugMode) {
-        print('Error uploading banner image: $e');
-      }
+      AppLog.error('RacerService', 'Image upload failed', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -247,14 +198,6 @@ class RacerService {
 
       final uri = Uri.parse(ApiConfig.waiverUploadEndpoint);
 
-      if (kDebugMode) {
-        print('=== API Request: Upload Waiver ===');
-        print('URL: $uri');
-        print('Method: POST');
-        print('Filename: $filename');
-        print('Bytes: ${fileBytes.length}');
-      }
-
       final request = http.MultipartRequest('POST', uri);
       request.headers['Authorization'] = 'Bearer $token';
 
@@ -265,32 +208,16 @@ class RacerService {
       );
       request.files.add(multipartFile);
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await LoggedHttp.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (kDebugMode) {
-        print('=== API Response: Upload Waiver ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('Waiver uploaded successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to upload waiver: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Upload waiver');
-      if (kDebugMode) {
-        print('Error uploading waiver: $e');
-      }
+      AppLog.error('RacerService', 'Waiver upload failed', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -308,26 +235,13 @@ class RacerService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/me');
 
-      if (kDebugMode) {
-        print('=== API Request: Get Current Racer Profile ===');
-        print('URL: $uri');
-        print('Method: GET');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
-
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
-
-      if (kDebugMode) {
-        print('=== API Response: Get Current Racer Profile ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -372,23 +286,12 @@ class RacerService {
               ? DateTime.tryParse(responseBody['waiver_signed_at'] as String)
               : null,
         );
-
-        if (kDebugMode) {
-          print('Racer profile loaded successfully; has_valid_waiver=${responseBody['has_valid_waiver']}');
-        }
         return profile;
       } else {
-        if (kDebugMode) {
-          print('Failed to get racer profile: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get racer profile /me');
-      if (kDebugMode) {
-        print('Error getting racer profile: $e');
-      }
+      AppLog.error('RacerService', 'Failed to fetch racer profile', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }
@@ -400,18 +303,7 @@ class RacerService {
       final headers = _getAuthHeaders();
       final uri = Uri.parse(ApiConfig.myTicketsEndpoint);
 
-      if (kDebugMode) {
-        print('=== API Request: Get My Tickets ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('=== API Response: Get My Tickets ===');
-        print('Status: ${response.statusCode}');
-      }
+      final response = await LoggedHttp.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final list = jsonDecode(response.body) as List<dynamic>;
@@ -421,8 +313,7 @@ class RacerService {
       }
       return [];
     } catch (e, stack) {
-      logApiError(e, stack, 'Get my tickets');
-      if (kDebugMode) print('Error getting my tickets: $e');
+      AppLog.error('RacerService', 'Failed to fetch tickets', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -434,18 +325,7 @@ class RacerService {
       final headers = _getAuthHeaders();
       final uri = Uri.parse(ApiConfig.myRegistrationsEndpoint);
 
-      if (kDebugMode) {
-        print('=== API Request: Get My Registrations ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('=== API Response: Get My Registrations ===');
-        print('Status: ${response.statusCode}');
-      }
+      final response = await LoggedHttp.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final list = jsonDecode(response.body) as List<dynamic>;
@@ -455,8 +335,7 @@ class RacerService {
       }
       return [];
     } catch (e, stack) {
-      logApiError(e, stack, 'Get my registrations');
-      if (kDebugMode) print('Error getting my registrations: $e');
+      AppLog.error('RacerService', 'Failed to fetch registrations', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -474,14 +353,7 @@ class RacerService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/racers/all');
 
-      if (kDebugMode) {
-        print('=== API Request: Get All Racers ===');
-        print('URL: $uri');
-        print('Method: GET');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
-
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
@@ -490,12 +362,6 @@ class RacerService {
         },
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Get All Racers ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
         final List<dynamic> racersJson = responseBody is List ? responseBody : [];
@@ -503,23 +369,12 @@ class RacerService {
         final racers = racersJson.map((racerJson) {
           return RacerService._racerProfileFromJson(racerJson as Map<String, dynamic>);
         }).toList();
-
-        if (kDebugMode) {
-          print('Loaded ${racers.length} racers');
-        }
         return racers;
       } else {
-        if (kDebugMode) {
-          print('Failed to get racers: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         throw Exception('Failed to load racers: ${response.statusCode}');
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get racers');
-      if (kDebugMode) {
-        print('Error getting racers: $e');
-      }
+      AppLog.error('RacerService', 'Failed to fetch racers', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -542,13 +397,6 @@ class RacerService {
       }
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/racers/$racerId');
-      
-      if (kDebugMode) {
-        print('=== API Request: Update Racer Profile ===');
-        print('URL: $uri');
-        print('Method: PATCH');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
       
       // Build request payload matching RacerUpdate schema
       final payload = <String, dynamic>{};
@@ -582,11 +430,8 @@ class RacerService {
 
       // Send PATCH request
       final requestBody = jsonEncode(payload);
-      if (kDebugMode) {
-        print('Request Body: $requestBody');
-      }
 
-      final response = await http.patch(
+      final response = await LoggedHttp.patch(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
@@ -595,29 +440,13 @@ class RacerService {
         body: requestBody,
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Update Racer Profile ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('Racer profile updated successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to update racer profile: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Update racer profile');
-      if (kDebugMode) {
-        print('Error updating racer profile: $e');
-      }
+      AppLog.error('RacerService', 'Failed to update racer profile', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -636,12 +465,7 @@ class RacerService {
       };
       if (token != null) headers['Authorization'] = 'Bearer $token';
 
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Racer by ID ===');
-        print('Status Code: ${response.statusCode}');
-      }
+      final response = await LoggedHttp.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -651,12 +475,10 @@ class RacerService {
       } else if (response.statusCode == 404) {
         return null;
       } else {
-        if (kDebugMode) print('Failed to get racer: ${response.statusCode}');
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get racer by id');
-      if (kDebugMode) print('Error getting racer by id: $e');
+      AppLog.error('RacerService', 'Failed to fetch racer', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }
@@ -703,19 +525,13 @@ class RacerService {
     );
   }
 
-  /// Get PWCs for a racer (public, no auth).
-  /// GET /racers/{racer_id}/pwcs
-  Future<List<PWC>> getRacerPWCs(String racerId) async {
+  /// GET /racers/{racer_id}/history — completed event results for a racer.
+  Future<List<RacerHistoryItem>> getRacerHistory(String racerId) async {
+    if (racerId.isEmpty) return [];
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}/racers/$racerId/pwcs');
+      final uri = Uri.parse('${ApiConfig.baseUrl}/racers/$racerId/history');
 
-      if (kDebugMode) {
-        print('=== API Request: Get Racers PWCs ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         uri,
         headers: {
           'Content-Type': 'application/json',
@@ -723,33 +539,49 @@ class RacerService {
         },
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Get Racers PWCs ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List<dynamic> itemsJson = body is List ? body : [];
+        return itemsJson
+            .map((e) => RacerHistoryItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        return [];
       }
+    } catch (e, stack) {
+      AppLog.error('RacerService', 'Failed to fetch racer history', error: e, stackTrace: stack, recoverable: true);
+      return [];
+    }
+  }
+
+  /// Get PWCs for a racer (public, no auth).
+  /// GET /racers/{racer_id}/pwcs
+  Future<List<PWC>> getRacerPWCs(String racerId) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}/racers/$racerId/pwcs');
+
+      final response = await LoggedHttp.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+      );
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         final List<dynamic> pwcsJson = body is List ? body : (body['pwcs'] as List? ?? []);
         final pwcs = pwcsJson.map((json) => PWC.fromJson(json as Map<String, dynamic>)).toList();
-        if (kDebugMode) {
-          print('Loaded ${pwcs.length} PWCs for racer $racerId');
-        }
         return pwcs;
       } else if (response.statusCode == 404) {
         return [];
       } else {
-        if (kDebugMode) {
-          print('Failed to get racer PWCs: ${response.statusCode}');
-        }
         return [];
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get racer PWCs');
-      if (kDebugMode) {
-        print('Error getting racer PWCs: $e');
-      }
+      AppLog.error('RacerService', 'Failed to fetch racer PWCs', error: e, stackTrace: stack, recoverable: true);
       return [];
     }
   }

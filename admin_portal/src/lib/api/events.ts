@@ -4,10 +4,11 @@
  */
 
 import { apiGet, apiPost, apiPatch, apiDelete, getAdminApiKey, type ApiResponse } from '$lib/api/client';
+import { parseApiDateTime } from '$lib/format/datetime';
 
 const base = () => '/admin/events';
 
-export type EventRegistrationStatus = 'open' | 'closed' | 'upcoming' | 'past';
+export type EventStatus = 'draft' | 'posted' | 'completed';
 
 export interface EventScheduleItem {
 	id: string;
@@ -73,7 +74,8 @@ export interface EventBase {
 	format?: EventFormat | null;
 	classes: EventClass[];
 	rules: EventRule[];
-	registration_status: EventRegistrationStatus;
+	event_status: EventStatus;
+	registration_status?: string;
 	results_url?: string | null;
 	results?: Record<string, unknown>;
 	is_published: boolean;
@@ -93,7 +95,7 @@ export interface EventCreate {
 	schedule: EventScheduleItem[];
 	event_info: EventInfo;
 	format?: EventFormat | null;
-	registration_status?: EventRegistrationStatus;
+	event_status?: EventStatus;
 	is_published?: boolean;
 }
 
@@ -110,7 +112,7 @@ export interface EventUpdate {
 	format?: EventFormat | null;
 	classes?: EventClass[] | null;
 	rules?: EventRule[] | null;
-	registration_status?: EventRegistrationStatus | null;
+	event_status?: EventStatus | null;
 	results_url?: string | null;
 	results?: Record<string, unknown> | null;
 	is_published?: boolean | null;
@@ -125,6 +127,12 @@ export interface EventListResponse {
 
 export interface EventResponse {
 	event: EventBase;
+}
+
+export interface DuplicateEventRequest {
+	name: string;
+	start_date: string;
+	end_date?: string | null;
 }
 
 /** Hydrated racer on EventRegistrationBase (RacerBase; optional, not stored). */
@@ -155,6 +163,8 @@ export interface RacerHydrated {
 	banner_image_path?: string | null;
 	waiver_path?: string | null;
 	waiver_signed_at?: string | null;
+	/** Racer-entered watercraft labels (Flutter /me/pwc). */
+	pwc_id?: string[] | null;
 	[key: string]: unknown;
 }
 
@@ -196,10 +206,12 @@ const MAX_PAGE_SIZE = 500;
 
 export async function fetchEvents(
 	page = 1,
-	pageSize = 100
+	pageSize = 100,
+	status?: EventStatus
 ): Promise<ApiResponse<EventListResponse>> {
 	const cappedPageSize = Math.min(pageSize, MAX_PAGE_SIZE);
-	const q = `?page=${page}&page_size=${cappedPageSize}`;
+	const statusParam = status ? `&status=${status}` : '';
+	const q = `?page=${page}&page_size=${cappedPageSize}${statusParam}`;
 	return apiGet<EventListResponse>(`${base()}${q}`);
 }
 
@@ -252,6 +264,17 @@ export async function updateEvent(id: string, payload: EventUpdate): Promise<Api
 
 export async function deleteEvent(id: string): Promise<ApiResponse<void>> {
 	return apiDelete(`${base()}/${id}`);
+}
+
+export async function markEventComplete(id: string): Promise<ApiResponse<EventBase>> {
+	return apiPost<EventBase>(`${base()}/${id}/mark-complete`, {});
+}
+
+export async function duplicateEvent(
+	id: string,
+	payload: DuplicateEventRequest
+): Promise<ApiResponse<EventBase>> {
+	return apiPost<EventBase>(`${base()}/${id}/duplicate`, payload as unknown as Record<string, unknown>);
 }
 
 function getApiBase(): string {
@@ -313,7 +336,8 @@ export async function uploadEventImage(
 /** Format ISO datetime for datetime-local input (YYYY-MM-DDTHH:mm) */
 export function toDatetimeLocal(iso: string | null | undefined): string {
 	if (!iso) return '';
-	const d = new Date(iso);
+	const d = parseApiDateTime(iso);
+	if (!d) return '';
 	const y = d.getFullYear();
 	const m = String(d.getMonth() + 1).padStart(2, '0');
 	const day = String(d.getDate()).padStart(2, '0');
@@ -332,8 +356,8 @@ export function fromDatetimeLocal(v: string): string | null {
 /** Extract HH:mm from ISO datetime for &lt;input type="time"&gt; */
 export function isoToTime(iso: string | null | undefined): string {
 	if (!iso) return '';
-	const d = new Date(iso);
-	if (Number.isNaN(d.getTime())) return '';
+	const d = parseApiDateTime(iso);
+	if (!d) return '';
 	return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 

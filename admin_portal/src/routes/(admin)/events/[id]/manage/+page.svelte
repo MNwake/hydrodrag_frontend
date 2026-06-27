@@ -2,7 +2,11 @@
 	import { page } from '$app/stores';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { fetchEvent, type EventBase } from '$lib/api/events';
-	import { fetchEventRegistrations, type EventRegistrationAdmin } from '$lib/api/registrations';
+	import {
+		fetchEventRegistrations,
+		updateRegistration,
+		type EventRegistrationAdmin
+	} from '$lib/api/registrations';
 	import {
 		fetchRounds,
 		createRound,
@@ -26,17 +30,23 @@
 		type SpeedSessionBase,
 		type SpeedRankingItem
 	} from '$lib/api/speed';
-	import DataTable from '$lib/components/DataTable.svelte';
 	import { toast } from '$lib/stores/toast';
+	import { formatDateTimeLocal, parseApiDateTime } from '$lib/format/datetime';
 	import { apiGetBlob } from '$lib/api/client';
+	import { isStaffPortal } from '$lib/admin-auth';
+	import Modal from '$lib/components/Modal.svelte';
+	import BracketVisual from '$lib/components/brackets/BracketVisual.svelte';
+	import type { BracketRacerRef } from '$lib/brackets/buildBracketSections';
+
+	const staffViewOnly = isStaffPortal();
 
 	let loading = true;
 	let error: string | null = null;
 	let event: EventBase | null = null;
 	let registrations: EventRegistrationAdmin[] = [];
 
-	// Tab state per class: 'details' | 'matchups' | 'speed'
-	let activeTab: Record<string, 'details' | 'matchups' | 'speed'> = {};
+	// Tab state per class: 'details' | 'brackets' | 'matchups' | 'speed'
+	let activeTab: Record<string, 'details' | 'brackets' | 'matchups' | 'speed'> = {};
 
 	// Sorting state per class
 	type SortKey = 'seed' | 'racer_name' | 'pwc_identifier' | 'losses' | 'status' | 'payment' | 'ihra_membership' | 'valid_waiver' | 'is_of_age';
@@ -57,9 +67,10 @@
 		racerA: EventRegistrationAdmin;
 		racerB: EventRegistrationAdmin | null; // null if bye
 		winner: string | null; // registration id
-		bracket: string; // "W" = winner bracket, "L" = loser bracket
+		bracket: string; // "W" | "L" | "C" (championship)
 		seed_a: number;
-		seed_b: number | null; // null for bye
+		seed_b: number | null; // null for bye or pending opponent
+		is_bye?: boolean;
 		roundId?: string; // backend round ID
 	};
 
@@ -76,25 +87,42 @@
 	// Dragging state
 	let draggedRacer: { classKey: string; round: number; matchupId: string; racerId: string } | null = null;
 
+	type PendingAssignTarget = {
+		classKey: string;
+		roundNum: number;
+		roundId: string;
+		matchupId: string;
+		bracket: string;
+		opponentRegId: string;
+		seedA: number;
+	};
+
+	let showPendingAssignModal = false;
+	let pendingAssignTarget: PendingAssignTarget | null = null;
+	let pendingAssignSearch = '';
+	let pendingAssignSaving = false;
+
 	// Top speed (top_speed events): session info and rankings per class
 	let speedSessionByClass: Record<string, SpeedSessionBase | null> = {};
 	let speedRankingsByClass: Record<string, SpeedRankingItem[]> = {};
 	let speedSessionLoading: Record<string, boolean> = {};
 	let speedUpdatingRegId: string | null = null;
-	/** Duration in minutes before starting (per class). Default 10. */
+	let pwcUpdatingRegId: string | null = null;
+	/** Duration in minutes before starting (per class). Default 5. */
 	let speedDurationMinutesByClass: Record<string, number> = {};
 	/** Debounce timeouts for duration API calls per class. */
 	let speedDurationDebounce: Record<string, ReturnType<typeof setTimeout>> = {};
 	/** Ticks every second for timer display when a speed session is active. */
 	let speedTimerTick = 0;
 	let speedTimerInterval: ReturnType<typeof setInterval> | null = null;
+	$: eventLocked = staffViewOnly || event?.event_status === 'completed';
 	/** Display remaining seconds per class; synced from server on each response, then counted down client-side. */
 	let displayRemainingByClass: Record<string, number> = {};
 
 	const columns: { key: SortKey; label: string; class?: 'num' | 'center' | 'seed'; sortable?: boolean }[] = [
 		{ key: 'seed', label: 'Seed', class: 'seed', sortable: true },
 		{ key: 'racer_name', label: 'Racer', sortable: true },
-		{ key: 'pwc_identifier', label: 'PWC', sortable: true },
+		{ key: 'pwc_identifier', label: 'PWC ID', sortable: true },
 		{ key: 'losses', label: 'Losses', class: 'num', sortable: true },
 		{ key: 'status', label: 'Status', sortable: true },
 		{ key: 'payment', label: 'Payment', sortable: true },
@@ -121,9 +149,16 @@
 				bracket: m.bracket ?? 'W',
 				seed_a: m.seed_a ?? 0,
 				seed_b: m.seed_b ?? null,
+				is_bye: m.is_bye ?? false,
 				roundId: roundBase.id
 			});
 		}
+		const bracketOrder: Record<string, number> = { W: 0, L: 1, C: 2 };
+		matchups.sort(
+			(a, b) =>
+				(bracketOrder[a.bracket] ?? 9) - (bracketOrder[b.bracket] ?? 9) ||
+				a.seed_a - b.seed_a
+		);
 		// Only return round if it has at least one valid matchup
 		if (matchups.length === 0) {
 			return null;
@@ -246,6 +281,116 @@
 		return full || (model?.email ? String(model.email) : '—');
 	}
 
+	function bracketRacerLabel(r: BracketRacerRef): string {
+		return racerDisplay(r as EventRegistrationAdmin);
+	}
+
+	function bracketLossesRuleLabel(bracket: string): string {
+		if (bracket === 'W') return '0 losses (winners bracket)';
+		if (bracket === 'L') return 'exactly 1 loss (losers bracket)';
+		if (bracket === 'C') return '0 or 1 loss (championship)';
+		return 'fewer than 2 losses';
+	}
+
+	function registrationAllowedInBracket(reg: EventRegistrationAdmin, bracket: string): boolean {
+		const losses = reg.losses ?? 0;
+		if (losses >= 2) return false;
+		if (bracket === 'W') return losses === 0;
+		if (bracket === 'L') return losses === 1;
+		if (bracket === 'C') return losses === 0 || losses === 1;
+		return losses < 2;
+	}
+
+	function registrationIdsInRound(round: Round | undefined): Set<string> {
+		const ids = new Set<string>();
+		if (!round) return ids;
+		for (const m of round.matchups) {
+			ids.add(m.racerA.id);
+			if (m.racerB) ids.add(m.racerB.id);
+		}
+		return ids;
+	}
+
+	function eligibleForPendingSlot(target: PendingAssignTarget): EventRegistrationAdmin[] {
+		const round = (roundsByClass[target.classKey] || []).find((r) => r.number === target.roundNum);
+		const inRound = registrationIdsInRound(round);
+		const classRegs = registrations.filter((r) => r.class_key === target.classKey);
+		return classRegs
+			.filter((reg) => {
+				if (reg.id === target.opponentRegId) return false;
+				if (inRound.has(reg.id)) return false;
+				return registrationAllowedInBracket(reg, target.bracket);
+			})
+			.sort((a, b) => racerDisplay(a).localeCompare(racerDisplay(b), undefined, { sensitivity: 'base' }));
+	}
+
+	function openPendingAssign(
+		classKey: string,
+		round: Round,
+		matchup: Matchup
+	) {
+		if (staffViewOnly || matchup.is_bye || matchup.racerB || matchup.winner) return;
+		if (!round.id) return;
+		pendingAssignTarget = {
+			classKey,
+			roundNum: round.number,
+			roundId: round.id,
+			matchupId: matchup.matchup_id,
+			bracket: matchup.bracket,
+			opponentRegId: matchup.racerA.id,
+			seedA: matchup.seed_a
+		};
+		pendingAssignSearch = '';
+		showPendingAssignModal = true;
+	}
+
+	function closePendingAssign() {
+		showPendingAssignModal = false;
+		pendingAssignTarget = null;
+		pendingAssignSearch = '';
+		pendingAssignSaving = false;
+	}
+
+	async function assignPendingOpponent(reg: EventRegistrationAdmin) {
+		if (staffViewOnly || !pendingAssignTarget) return;
+		const eventId = $page.params.id;
+		if (!eventId) return;
+
+		const target = pendingAssignTarget;
+		pendingAssignSaving = true;
+		const scrollY = window.scrollY;
+
+		const res = await updateMatchup(eventId, target.roundId, target.matchupId, {
+			racer_b: reg.id,
+			seed_b: target.seedA + 1
+		});
+		pendingAssignSaving = false;
+
+		if (!res.ok) {
+			toast(res.error ?? 'Failed to assign racer', 'error');
+			return;
+		}
+
+		closePendingAssign();
+		await reloadRegistrations(eventId);
+		await loadRounds(eventId);
+		await tick();
+		window.scrollTo(0, scrollY);
+		toast(`${racerDisplay(reg)} assigned to matchup`, 'success');
+	}
+
+	$: filteredPendingAssignRegs = (() => {
+		if (!pendingAssignTarget) return [];
+		const eligible = eligibleForPendingSlot(pendingAssignTarget);
+		const q = pendingAssignSearch.trim().toLowerCase();
+		if (!q) return eligible;
+		return eligible.filter((reg) => {
+			const name = racerDisplay(reg).toLowerCase();
+			const pwc = (reg.pwc_identifier ?? '').toLowerCase();
+			const email = (reg.racer?.email ?? reg.racer_model?.email ?? '').toLowerCase();
+			return name.includes(q) || pwc.includes(q) || email.includes(q);
+		});
+	})();
 
 	/** Group registrations by class_key. Order: event classes first, then "Other". */
 	$: byClass = (() => {
@@ -277,6 +422,7 @@
 		const round1 = rounds.find((r) => r.number === 1);
 		if (!round1?.matchups) return null;
 		for (const m of round1.matchups) {
+			if (m.bracket !== 'W') continue;
 			if (m.racerA.id === registrationId) return m.seed_a;
 			if (m.racerB?.id === registrationId) return m.seed_b ?? null;
 		}
@@ -295,6 +441,7 @@
 			const seed = getSeedForRegistration(classKey, r.id);
 
 			return {
+				id: r.id,
 				seed: seed != null ? seed : '—',
 				racer_name: racerDisplay(r),
 				pwc_identifier: r.pwc_identifier || '—',
@@ -391,6 +538,7 @@
 
 	/** Create a new round for a class. Backend builds bracket (initial or next round). */
 	async function generateMatchups(classKey: string) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 
@@ -407,6 +555,7 @@
 
 	/** Reset class to pre-event settings (clears rounds/matchups for this class). */
 	async function resetClassHandler(classKey: string) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 		if (!confirm(`Reset ${classKey} to pre-event settings? This will remove all rounds and matchups for this class.`)) {
@@ -459,6 +608,7 @@
 
 	/** Delete a round */
 	async function deleteRoundHandler(classKey: string, roundId: string, roundNum: number) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 
@@ -492,6 +642,7 @@
 
 	/** Record winner for a matchup */
 	async function recordMatchupWinner(classKey: string, roundNum: number, matchupId: string, winnerId: string) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 
@@ -523,6 +674,7 @@
 
 	/** Undo winner selection for a matchup */
 	async function undoMatchupWinner(classKey: string, roundNum: number, matchupId: string) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 
@@ -548,7 +700,7 @@
 		await loadRounds(id);
 		await tick();
 		window.scrollTo(0, scrollY);
-		toast('Winner selection undone. Note: The loss recorded on the backend may need manual correction.', 'default');
+		toast('Winner selection undone', 'success');
 	}
 
 	/** Swap racers between matchups (drag and drop) */
@@ -560,6 +712,7 @@
 		targetMatchupId: string,
 		targetRacerId: string
 	) {
+		if (eventLocked) return;
 		const id = $page.params.id;
 		if (!id) return;
 
@@ -622,11 +775,15 @@
 	}
 
 	/** Set tab for a class. When switching to speed tab we always fetch fresh session from server. */
-	function setTab(classKey: string, tab: 'details' | 'matchups' | 'speed') {
+	function setTab(classKey: string, tab: 'details' | 'brackets' | 'matchups' | 'speed') {
 		activeTab = { ...activeTab, [classKey]: tab };
 		if (tab === 'speed' && event?.id) {
-			loadSpeedSessionForClass(classKey);
-			loadSpeedRankingsForClass(classKey);
+			if (staffViewOnly) {
+				loadSpeedRankingsForClass(classKey);
+			} else {
+				loadSpeedSessionForClass(classKey);
+				loadSpeedRankingsForClass(classKey);
+			}
 		}
 	}
 
@@ -635,8 +792,12 @@
 		if (!event?.id || event?.format !== 'top_speed') return;
 		for (const { classKey } of byClass) {
 			if ((activeTab[classKey] || 'details') === 'speed') {
-				loadSpeedSessionForClass(classKey);
-				loadSpeedRankingsForClass(classKey);
+				if (staffViewOnly) {
+					loadSpeedRankingsForClass(classKey);
+				} else {
+					loadSpeedSessionForClass(classKey);
+					loadSpeedRankingsForClass(classKey);
+				}
 			}
 		}
 	}
@@ -672,7 +833,7 @@
 
 	/** Called when user changes session length (debounced). Updates backend. */
 	function onSpeedDurationChange(classKey: string, minutes: number) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		const prev = speedDurationDebounce[classKey];
 		if (prev) clearTimeout(prev);
 		speedDurationDebounce[classKey] = setTimeout(async () => {
@@ -687,8 +848,8 @@
 	}
 
 	async function startSpeedHandler(classKey: string) {
-		if (!event?.id) return;
-		const minutes = Math.max(1, Math.min(180, Math.round(speedDurationMinutesByClass[classKey] ?? 10)));
+		if (staffViewOnly || !event?.id) return;
+		const minutes = Math.max(1, Math.min(180, Math.round(speedDurationMinutesByClass[classKey] ?? 5)));
 		const durationRes = await updateSpeedSessionDuration(event.id, classKey, minutes);
 		if (!durationRes.ok) {
 			toast(durationRes.error ?? 'Failed to set session duration', 'error');
@@ -708,7 +869,7 @@
 	}
 
 	async function stopSpeedHandler(classKey: string) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		const res = await stopSpeedSession(event.id, classKey);
 		if (res.ok && res.data) {
 			speedSessionByClass = { ...speedSessionByClass, [classKey]: res.data };
@@ -720,7 +881,7 @@
 	}
 
 	async function pauseSpeedHandler(classKey: string) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		const res = await pauseSpeedSession(event.id, classKey);
 		if (res.ok) {
 			await loadSpeedSessionForClass(classKey);
@@ -731,7 +892,7 @@
 	}
 
 	async function resumeSpeedHandler(classKey: string) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		const res = await resumeSpeedSession(event.id, classKey);
 		if (res.ok) {
 			await loadSpeedSessionForClass(classKey);
@@ -742,7 +903,7 @@
 	}
 
 	async function resetSpeedHandler(classKey: string) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		if (!confirm('Reset this class\'s speed session? This will clear all recorded speeds.')) return;
 		const res = await resetSpeedSession(event.id, classKey);
 		if (res.ok) {
@@ -765,11 +926,11 @@
 		if (!session.started_at) return session.duration_seconds;
 		if (session.stopped_at) return 0;
 		const now = Date.now() / 1000;
-		const startSec = new Date(session.started_at).getTime() / 1000;
+		const startSec = (parseApiDateTime(session.started_at)?.getTime() ?? 0) / 1000;
 		let elapsed = now - startSec;
 		elapsed -= session.total_paused_seconds ?? 0;
 		if (session.paused_at) {
-			const pausedSec = new Date(session.paused_at).getTime() / 1000;
+			const pausedSec = (parseApiDateTime(session.paused_at)?.getTime() ?? 0) / 1000;
 			elapsed -= now - pausedSec;
 		}
 		const raw = Math.floor(session.duration_seconds - elapsed);
@@ -848,9 +1009,59 @@
 		Object.values(speedDurationDebounce).forEach((t) => clearTimeout(t));
 	});
 
+	/** Update PWC on racer profile and all of this racer's registrations for this event. */
+	async function submitPwcId(regId: string, raw: string) {
+		if (staffViewOnly || !event?.id) return;
+		const value = raw.trim();
+		if (!value) {
+			toast('PWC ID cannot be empty.', 'error');
+			return;
+		}
+		const reg = registrations.find((r) => r.id === regId);
+		if (!reg) return;
+
+		const racerId = reg.racer?.id ?? reg.racer_model?.id;
+		const eventRegsForRacer = racerId
+			? registrations.filter((r) => (r.racer?.id ?? r.racer_model?.id) === racerId)
+			: [reg];
+		const alreadySet = eventRegsForRacer.every((r) => (r.pwc_identifier ?? '').trim() === value);
+		if (alreadySet) return;
+
+		pwcUpdatingRegId = regId;
+		const res = await updateRegistration(regId, { pwc_identifier: value });
+		pwcUpdatingRegId = null;
+
+		if (!res.ok) {
+			toast(res.error ?? 'Failed to update PWC ID', 'error');
+			return;
+		}
+
+		await reloadRegistrations(event.id);
+		const n = eventRegsForRacer.length;
+		toast(
+			n > 1
+				? `PWC ID saved to racer profile and ${n} registrations`
+				: 'PWC ID saved to racer profile and registration',
+			'success'
+		);
+	}
+
+	function displayPwcId(reg: EventRegistrationAdmin): string {
+		const v = (reg.pwc_identifier ?? '').trim();
+		return v || '';
+	}
+
+	function classSortKey(classKey: string): SortKey {
+		return sortKeyByClass[classKey] ?? 'racer_name';
+	}
+
+	function classSortDir(classKey: string): SortDir {
+		return sortDirByClass[classKey] ?? 'asc';
+	}
+
 	/** Submit speed for a racer (on blur or Enter). Updates local state and rankings from response. */
 	async function submitSpeed(classKey: string, regId: string, speedStr: string) {
-		if (!event?.id) return;
+		if (staffViewOnly || !event?.id) return;
 		const speed = parseFloat(speedStr.trim());
 		if (!Number.isFinite(speed) || speed <= 0) return;
 		speedUpdatingRegId = regId;
@@ -869,14 +1080,20 @@
 	}
 
 	function formatSpeedSessionTime(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+		return formatDateTimeLocal(iso);
 	}
 
 	function getRacerNameForRegId(regId: string): string {
 		const r = registrations.find((rr) => rr.id === regId);
 		return r ? racerDisplay(r) : regId;
+	}
+
+	function getPwcForRegId(regId: string, item?: SpeedRankingItem): string {
+		const fromItem = item?.pwc_identifier?.trim();
+		if (fromItem) return fromItem;
+		const r = registrations.find((rr) => rr.id === regId);
+		const fromReg = r?.pwc_identifier?.trim();
+		return fromReg || '—';
 	}
 
 	// Accordion: only one class section open at a time; default all closed
@@ -913,15 +1130,22 @@
 		<h1 class="page-title">Manage event</h1>
 		<p class="page-subtitle">
 			{#if event}
-				{event.name}
+				{event.name} · {event.event_status}
 			{:else}
 				Event registrations
 			{/if}
 		</p>
+		{#if event?.event_status === 'completed'}
+			<p class="page-subtitle">Completed event is read-only. Results remain viewable.</p>
+		{:else if event?.event_status === 'draft'}
+			<p class="page-subtitle">Draft event is not visible to racers.</p>
+		{:else if event?.event_status === 'posted'}
+			<p class="page-subtitle">Posted event is visible in mobile upcoming events.</p>
+		{/if}
 	</div>
 	<div style="display: flex; gap: 0.5rem;">
 		<a href="/events" class="btn btn-secondary">← Back to events</a>
-		{#if event}
+		{#if event && !staffViewOnly}
 			<a href="/events/{event.id}" class="btn btn-primary">Edit event</a>
 		{/if}
 	</div>
@@ -981,6 +1205,14 @@
 						<button
 							type="button"
 							class="class-tab"
+							class:active={(tabs[classKey] || 'details') === 'brackets'}
+							onclick={() => setTab(classKey, 'brackets')}
+						>
+							Brackets
+						</button>
+						<button
+							type="button"
+							class="class-tab"
 							class:active={(tabs[classKey] || 'details') === 'matchups'}
 							onclick={() => setTab(classKey, 'matchups')}
 						>
@@ -990,15 +1222,117 @@
 				</div>
 
 				{#if (tabs[classKey] || 'details') === 'details'}
-					<DataTable
-						columns={columns}
-						rows={sortedRowsByClass[classKey] || []}
-						emptyMessage="No registrations in this class."
-						sortKey={sortKeyByClass[classKey] ?? 'racer_name'}
-						sortDir={sortDirByClass[classKey] ?? 'asc'}
-						onSort={(key) => toggleSort(classKey, key as SortKey)}
-					/>
+					<div class="racer-details-view">
+						{#if !eventLocked}
+							<p class="racer-details-hint">
+								Edit PWC ID per racer (e.g. boat number). Press Enter or click away to save.
+							</p>
+						{/if}
+						<div class="data-table-wrap">
+							<table class="data-table racer-details-table">
+								<thead>
+									<tr>
+										{#each columns as col}
+											<th class={col.class ?? ''}>
+												{#if col.sortable !== false}
+													<button
+														type="button"
+														class="th-sort"
+														class:active={classSortKey(classKey) === col.key}
+														onclick={() => toggleSort(classKey, col.key as SortKey)}
+													>
+														{col.label}
+														{#if classSortKey(classKey) === col.key}
+															<span class="th-sort-icon" aria-hidden="true">
+																{classSortDir(classKey) === 'asc' ? '↑' : '↓'}
+															</span>
+														{/if}
+													</button>
+												{:else}
+													{col.label}
+												{/if}
+											</th>
+										{/each}
+									</tr>
+								</thead>
+								<tbody>
+									{#if regs.length === 0}
+										<tr class="data-table-empty-row">
+											<td colspan={columns.length} class="center" style="padding: 2rem; color: var(--text-muted);">
+												No registrations in this class.
+											</td>
+										</tr>
+									{:else}
+										{#each sortedRowsByClass[classKey] || [] as row (row.id)}
+											{@const reg = registrations.find((r) => r.id === row.id)}
+											{#if reg}
+												<tr>
+													<td class="seed">{row.seed}</td>
+													<td>{row.racer_name}</td>
+													<td>
+														{#if staffViewOnly}
+															{row.pwc_identifier}
+														{:else}
+															<input
+																type="text"
+																class="pwc-id-input"
+																placeholder="PWC ID"
+																value={displayPwcId(reg)}
+																disabled={pwcUpdatingRegId === reg.id}
+																onblur={(e) => void submitPwcId(reg.id, e.currentTarget.value)}
+																onkeydown={(e) => {
+																	if (e.key === 'Enter') {
+																		e.preventDefault();
+																		void submitPwcId(reg.id, (e.currentTarget as HTMLInputElement).value);
+																	}
+																}}
+															/>
+														{/if}
+													</td>
+													<td class="num">{row.losses}</td>
+													<td>{row.status}</td>
+													<td>{row.payment}</td>
+													<td>{row.ihra_membership}</td>
+													<td>{row.valid_waiver}</td>
+													<td>{row.is_of_age}</td>
+												</tr>
+											{/if}
+										{/each}
+									{/if}
+								</tbody>
+							</table>
+						</div>
+					</div>
 				{:else if (tabs[classKey] || 'details') === 'speed' && event?.format === 'top_speed'}
+					{#if staffViewOnly}
+					<div class="speed-view speed-view-staff">
+						<p class="speed-hint">Session controls and speed entry are admin-only. Rankings update as speeds are recorded.</p>
+						<button
+							type="button"
+							class="btn btn-secondary btn-sm"
+							disabled={exportingPdfClassKey === classKey}
+							onclick={() => exportClassPdf(classKey)}
+						>
+							{exportingPdfClassKey === classKey ? 'Exporting…' : 'Export to PDF'}
+						</button>
+						<div class="speed-rankings" style="margin-top: 1rem;">
+							<h3 class="speed-subtitle">Rankings</h3>
+							{#if (speedRankingsByClass[classKey] || []).length === 0}
+								<p class="speed-no-rankings">No speeds recorded yet.</p>
+							{:else}
+								<ol class="speed-rankings-list">
+									{#each speedRankingsByClass[classKey] || [] as item}
+										<li class="speed-ranking-item">
+											<span class="speed-place">{getPwcForRegId(item.registration_id, item)}</span>
+											<span class="speed-racer-name">{getRacerNameForRegId(item.registration_id)}</span>
+											<span class="speed-value">{item.top_speed} mph</span>
+										</li>
+									{/each}
+								</ol>
+							{/if}
+						</div>
+					</div>
+					{:else}
 					{@const session = speedSessionByClass[classKey]}
 					{@const sessionActive = isSpeedSessionActive(session)}
 					<div class="speed-view">
@@ -1052,7 +1386,7 @@
 											min="1"
 											max="180"
 											class="speed-duration-input"
-											value={speedDurationMinutesByClass[classKey] ?? 10}
+											value={speedDurationMinutesByClass[classKey] ?? 5}
 											oninput={(e) => {
 												const v = parseInt(e.currentTarget.value, 10);
 												if (Number.isFinite(v) && v >= 1 && v <= 180) {
@@ -1128,7 +1462,7 @@
 									<ol class="speed-rankings-list">
 										{#each speedRankingsByClass[classKey] || [] as item}
 											<li class="speed-ranking-item">
-												<span class="speed-place">#{item.place}</span>
+												<span class="speed-place">{getPwcForRegId(item.registration_id, item)}</span>
 												<span class="speed-racer-name">{getRacerNameForRegId(item.registration_id)}</span>
 												<span class="speed-value">{item.top_speed} mph</span>
 											</li>
@@ -1137,6 +1471,11 @@
 								{/if}
 							</div>
 						</div>
+					</div>
+					{/if}
+				{:else if (tabs[classKey] || 'details') === 'brackets'}
+					<div class="brackets-view">
+						<BracketVisual rounds={rounds[classKey] ?? []} racerLabel={bracketRacerLabel} />
 					</div>
 				{:else}
 					<div class="matchups-view">
@@ -1155,29 +1494,33 @@
 										>
 											Round {round.number}
 										</button>
-										<button
-											type="button"
-											class="round-tab-delete"
-											onclick={(e) => {
-												e.stopPropagation();
-												if (round.id) {
-													deleteRoundHandler(classKey, round.id, round.number);
-												}
-											}}
-											title="Delete Round {round.number}"
-										>
-											×
-										</button>
+										{#if !eventLocked}
+											<button
+												type="button"
+												class="round-tab-delete"
+												onclick={(e) => {
+													e.stopPropagation();
+													if (round.id) {
+														deleteRoundHandler(classKey, round.id, round.number);
+													}
+												}}
+												title="Delete Round {round.number}"
+											>
+												×
+											</button>
+										{/if}
 									{/each}
 								</div>
 								<div class="round-actions">
-									<button
-										type="button"
-										class="btn btn-primary btn-sm"
-										onclick={() => (roundsByClass[classKey]?.length ? resetClassHandler(classKey) : generateMatchups(classKey))}
-									>
-										{roundsByClass[classKey]?.length ? 'Reset Class' : 'Generate New Round'}
-									</button>
+									{#if !eventLocked}
+										<button
+											type="button"
+											class="btn btn-primary btn-sm"
+											onclick={() => (roundsByClass[classKey]?.length ? resetClassHandler(classKey) : generateMatchups(classKey))}
+										>
+											{roundsByClass[classKey]?.length ? 'Reset Class' : 'Generate New Round'}
+										</button>
+									{/if}
 									{#if roundsByClass[classKey]?.length}
 										<button
 											type="button"
@@ -1196,48 +1539,63 @@
 								<div class="matchups-list">
 									{#each currentRound.matchups as matchup}
 										<div class="matchup-card">
-											<div class="matchup-bracket-label" class:winner-bracket={matchup.bracket === 'W'} class:loser-bracket={matchup.bracket === 'L'}>
-												{matchup.bracket === 'W' ? 'Winner Bracket' : 'Loser Bracket'}
+											<div
+												class="matchup-bracket-label"
+												class:winner-bracket={matchup.bracket === 'W'}
+												class:loser-bracket={matchup.bracket === 'L'}
+												class:championship-bracket={matchup.bracket === 'C'}
+											>
+												{matchup.bracket === 'W'
+													? 'Winner Bracket'
+													: matchup.bracket === 'C'
+														? 'Championship'
+														: 'Loser Bracket'}
 											</div>
 											<div class="matchup-racers">
 											<div
 												class="matchup-racer"
 												class:winner={matchup.winner === matchup.racerA.id}
 												class:eliminated={(matchup.racerA.losses ?? 0) >= 2}
-												draggable={!matchup.winner}
+												draggable={!staffViewOnly && !matchup.winner}
 												role="button"
-												tabindex={matchup.winner ? undefined : 0}
-												ondragstart={(e) => {
-														if (!matchup.winner) {
-															draggedRacer = {
-																classKey,
-																round: currentRound.number,
-																matchupId: matchup.matchup_id,
-																racerId: matchup.racerA.id
-															};
-															e.dataTransfer!.effectAllowed = 'move';
+												tabindex={matchup.winner || eventLocked ? undefined : 0}
+												ondragstart={!staffViewOnly
+													? (e) => {
+															if (!matchup.winner) {
+																draggedRacer = {
+																	classKey,
+																	round: currentRound.number,
+																	matchupId: matchup.matchup_id,
+																	racerId: matchup.racerA.id
+																};
+																e.dataTransfer!.effectAllowed = 'move';
+															}
 														}
-													}}
-													ondragover={(e) => {
-														if (draggedRacer && !matchup.winner) {
+													: undefined}
+													ondragover={!staffViewOnly
+													? (e) => {
+															if (draggedRacer && !matchup.winner) {
+																e.preventDefault();
+																e.dataTransfer!.dropEffect = 'move';
+															}
+														}
+													: undefined}
+													ondrop={!staffViewOnly
+													? (e) => {
 															e.preventDefault();
-															e.dataTransfer!.dropEffect = 'move';
+															if (draggedRacer && draggedRacer.classKey === classKey && draggedRacer.round === currentRound.number) {
+																swapRacers(
+																	classKey,
+																	currentRound.number,
+																	draggedRacer.matchupId,
+																	draggedRacer.racerId,
+																	matchup.matchup_id,
+																	matchup.racerA.id
+																);
+																draggedRacer = null;
+															}
 														}
-													}}
-													ondrop={(e) => {
-														e.preventDefault();
-														if (draggedRacer && draggedRacer.classKey === classKey && draggedRacer.round === currentRound.number) {
-															swapRacers(
-																classKey,
-																currentRound.number,
-																draggedRacer.matchupId,
-																draggedRacer.racerId,
-																matchup.matchup_id,
-																matchup.racerA.id
-															);
-															draggedRacer = null;
-														}
-													}}
+													: undefined}
 												>
 													<div class="racer-name">{racerDisplay(matchup.racerA)}</div>
 													<div class="racer-details">Seed {matchup.seed_a} · Losses: {matchup.racerA.losses ?? 0}</div>
@@ -1248,49 +1606,69 @@
 													class="matchup-racer"
 													class:winner={matchup.winner === matchup.racerB.id}
 													class:eliminated={(matchup.racerB.losses ?? 0) >= 2}
-													draggable={!matchup.winner}
+													draggable={!staffViewOnly && !matchup.winner}
 													role="button"
-													tabindex={matchup.winner ? undefined : 0}
-													ondragstart={(e) => {
-															if (!matchup.winner) {
-																draggedRacer = {
-																	classKey,
-																	round: currentRound.number,
-																	matchupId: matchup.matchup_id,
-																	racerId: matchup.racerB!.id
-																};
-																e.dataTransfer!.effectAllowed = 'move';
+													tabindex={matchup.winner || eventLocked ? undefined : 0}
+													ondragstart={!staffViewOnly
+														? (e) => {
+																if (!matchup.winner) {
+																	draggedRacer = {
+																		classKey,
+																		round: currentRound.number,
+																		matchupId: matchup.matchup_id,
+																		racerId: matchup.racerB!.id
+																	};
+																	e.dataTransfer!.effectAllowed = 'move';
+																}
 															}
-														}}
-														ondragover={(e) => {
-															if (draggedRacer && !matchup.winner) {
+														: undefined}
+														ondragover={!staffViewOnly
+														? (e) => {
+																if (draggedRacer && !matchup.winner) {
+																	e.preventDefault();
+																	e.dataTransfer!.dropEffect = 'move';
+																}
+															}
+														: undefined}
+														ondrop={!staffViewOnly
+														? (e) => {
 																e.preventDefault();
-																e.dataTransfer!.dropEffect = 'move';
+																if (draggedRacer && draggedRacer.classKey === classKey && draggedRacer.round === currentRound.number) {
+																	swapRacers(
+																		classKey,
+																		currentRound.number,
+																		draggedRacer.matchupId,
+																		draggedRacer.racerId,
+																		matchup.matchup_id,
+																		matchup.racerB!.id
+																	);
+																	draggedRacer = null;
+																}
 															}
-														}}
-														ondrop={(e) => {
-															e.preventDefault();
-															if (draggedRacer && draggedRacer.classKey === classKey && draggedRacer.round === currentRound.number) {
-																swapRacers(
-																	classKey,
-																	currentRound.number,
-																	draggedRacer.matchupId,
-																	draggedRacer.racerId,
-																	matchup.matchup_id,
-																	matchup.racerB!.id
-																);
-																draggedRacer = null;
-															}
-														}}
+														: undefined}
 													>
 														<div class="racer-name">{racerDisplay(matchup.racerB)}</div>
 														<div class="racer-details">Seed {matchup.seed_b ?? '—'} · Losses: {matchup.racerB.losses ?? 0}</div>
 													</div>
 												{:else}
-													<div class="matchup-racer matchup-bye">Bye</div>
+													{#if matchup.is_bye}
+														<div class="matchup-racer matchup-bye">Bye</div>
+													{:else if !staffViewOnly && !matchup.winner}
+														<button
+															type="button"
+															class="matchup-racer matchup-pending matchup-pending-btn"
+															title="Assign a registered racer to this slot"
+															onclick={() => openPendingAssign(classKey, currentRound, matchup)}
+														>
+															<span class="matchup-pending-label">Pending</span>
+															<span class="matchup-pending-hint">Click to assign racer</span>
+														</button>
+													{:else}
+														<div class="matchup-racer matchup-pending">Pending</div>
+													{/if}
 												{/if}
 											</div>
-											{#if !matchup.winner}
+											{#if !matchup.winner && !staffViewOnly}
 												<div class="matchup-actions-buttons">
 												<button
 													type="button"
@@ -1311,53 +1689,57 @@
 													</button>
 												{/if}
 												</div>
-											{:else}
+											{:else if matchup.winner}
 												<div class="matchup-winner">
 													<div class="matchup-winner-info">
 														✓ Winner: <strong>{racerDisplay(matchup.racerA.id === matchup.winner ? matchup.racerA : matchup.racerB!)}</strong>
 													</div>
-													<button
-														type="button"
-														class="btn btn-secondary btn-sm"
-														onclick={() => undoMatchupWinner(classKey, currentRound.number, matchup.matchup_id)}
-													>
-														Undo
-													</button>
+													{#if !eventLocked}
+														<button
+															type="button"
+															class="btn btn-secondary btn-sm"
+															onclick={() => undoMatchupWinner(classKey, currentRound.number, matchup.matchup_id)}
+														>
+															Undo
+														</button>
+													{/if}
 												</div>
-												<div class="matchup-admin-section">
-													<label class="matchup-admin-label" for="notes-{matchup.matchup_id}">Notes</label>
-													<textarea
-														id="notes-{matchup.matchup_id}"
-														class="matchup-notes-input"
-														placeholder="Add notes…"
-														value={matchupNotes[matchup.matchup_id] ?? ''}
-														oninput={(e) => {
-															matchupNotes = { ...matchupNotes, [matchup.matchup_id]: e.currentTarget.value };
-														}}
-													></textarea>
-													<div class="matchup-flags">
-														<label class="matchup-flag">
-															<input
-																type="checkbox"
-																checked={matchupProtest[matchup.matchup_id] ?? false}
-																onchange={(e) => {
-																	matchupProtest = { ...matchupProtest, [matchup.matchup_id]: e.currentTarget.checked };
-																}}
-															/>
-															<span class="matchup-flag-label">Flag for protest</span>
-														</label>
-														<label class="matchup-flag">
-															<input
-																type="checkbox"
-																checked={matchupUnderReview[matchup.matchup_id] ?? false}
-																onchange={(e) => {
-																	matchupUnderReview = { ...matchupUnderReview, [matchup.matchup_id]: e.currentTarget.checked };
-																}}
-															/>
-															<span class="matchup-flag-label">Under review</span>
-														</label>
+												{#if !eventLocked}
+													<div class="matchup-admin-section">
+														<label class="matchup-admin-label" for="notes-{matchup.matchup_id}">Notes</label>
+														<textarea
+															id="notes-{matchup.matchup_id}"
+															class="matchup-notes-input"
+															placeholder="Add notes…"
+															value={matchupNotes[matchup.matchup_id] ?? ''}
+															oninput={(e) => {
+																matchupNotes = { ...matchupNotes, [matchup.matchup_id]: e.currentTarget.value };
+															}}
+														></textarea>
+														<div class="matchup-flags">
+															<label class="matchup-flag">
+																<input
+																	type="checkbox"
+																	checked={matchupProtest[matchup.matchup_id] ?? false}
+																	onchange={(e) => {
+																		matchupProtest = { ...matchupProtest, [matchup.matchup_id]: e.currentTarget.checked };
+																	}}
+																/>
+																<span class="matchup-flag-label">Flag for protest</span>
+															</label>
+															<label class="matchup-flag">
+																<input
+																	type="checkbox"
+																	checked={matchupUnderReview[matchup.matchup_id] ?? false}
+																	onchange={(e) => {
+																		matchupUnderReview = { ...matchupUnderReview, [matchup.matchup_id]: e.currentTarget.checked };
+																	}}
+																/>
+																<span class="matchup-flag-label">Under review</span>
+															</label>
+														</div>
 													</div>
-												</div>
+												{/if}
 											{/if}
 										</div>
 									{/each}
@@ -1365,14 +1747,18 @@
 							{/if}
 						{:else}
 							<div class="matchup-empty">
-								<p>No rounds generated yet. Click "Generate New Round" to create matchups.</p>
-								<button
-									type="button"
-									class="btn btn-primary"
-									onclick={() => generateMatchups(classKey)}
-								>
-									Generate New Round
-								</button>
+								{#if staffViewOnly}
+									<p>No rounds yet. Brackets are created by an administrator.</p>
+								{:else}
+									<p>No rounds generated yet. Click "Generate New Round" to create matchups.</p>
+									<button
+										type="button"
+										class="btn btn-primary"
+										onclick={() => generateMatchups(classKey)}
+									>
+										Generate New Round
+									</button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -1382,6 +1768,64 @@
 		{/each}
 	{/if}
 {/if}
+
+<Modal bind:open={showPendingAssignModal} title="Assign pending opponent">
+	{#if pendingAssignTarget}
+		<p class="pending-assign-intro">
+			Select a registered racer for this slot. Eligible racers have
+			<strong>{bracketLossesRuleLabel(pendingAssignTarget.bracket)}</strong>
+			and are not already in another matchup this round.
+		</p>
+		<div class="pending-assign-search-wrap">
+			<label class="pending-assign-search-label" for="pending-assign-search">Search</label>
+			<input
+				id="pending-assign-search"
+				type="search"
+				class="pending-assign-search"
+				placeholder="Name, email, or PWC…"
+				bind:value={pendingAssignSearch}
+				disabled={pendingAssignSaving}
+				autocomplete="off"
+			/>
+		</div>
+		{#if filteredPendingAssignRegs.length === 0}
+			<p class="pending-assign-empty">
+				No eligible racers found for this bracket slot.
+			</p>
+		{:else}
+			<ul class="pending-assign-list">
+				{#each filteredPendingAssignRegs as reg (reg.id)}
+					<li>
+						<button
+							type="button"
+							class="pending-assign-racer-btn"
+							disabled={pendingAssignSaving}
+							onclick={() => void assignPendingOpponent(reg)}
+						>
+							<span class="pending-assign-racer-name">{racerDisplay(reg)}</span>
+							<span class="pending-assign-racer-meta">
+								Losses: {reg.losses ?? 0}
+								{#if reg.pwc_identifier}
+									· PWC: {reg.pwc_identifier}
+								{/if}
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{/if}
+	<svelte:fragment slot="footer">
+		<button
+			type="button"
+			class="btn btn-secondary"
+			disabled={pendingAssignSaving}
+			onclick={closePendingAssign}
+		>
+			Cancel
+		</button>
+	</svelte:fragment>
+</Modal>
 
 <style>
 	.manage-class-section {
@@ -1455,6 +1899,9 @@
 	.class-tab.active {
 		color: var(--primary);
 		border-bottom-color: var(--primary);
+	}
+	.brackets-view {
+		margin-top: 1rem;
 	}
 	.matchups-view {
 		margin-top: 1rem;
@@ -1554,6 +2001,10 @@
 		background: #fef3c7;
 		color: #92400e;
 	}
+	.matchup-bracket-label.championship-bracket {
+		background: #ede9fe;
+		color: #5b21b6;
+	}
 	.matchup-racers {
 		display: flex;
 		align-items: center;
@@ -1586,15 +2037,116 @@
 	.matchup-racer[draggable="false"] {
 		cursor: default;
 	}
-	.matchup-bye {
+	.matchup-bye,
+	.matchup-pending {
 		flex: 1;
 		min-width: 150px;
 		padding: 0.75rem;
 		text-align: center;
 		color: var(--text-muted);
 		font-style: italic;
-		border: 2px dashed var(--border);
 		border-radius: var(--radius);
+	}
+	.matchup-bye {
+		border: 2px dashed var(--border);
+	}
+	.matchup-pending {
+		border: 2px dashed rgba(14, 165, 233, 0.45);
+		color: #0369a1;
+	}
+	.matchup-pending-btn {
+		width: 100%;
+		cursor: pointer;
+		font: inherit;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		transition:
+			border-color 0.15s,
+			background 0.15s,
+			color 0.15s;
+	}
+	.matchup-pending-btn:hover:not(:disabled) {
+		border-color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 8%, transparent);
+		color: var(--text);
+		font-style: normal;
+	}
+	.matchup-pending-label {
+		font-weight: 600;
+	}
+	.matchup-pending-hint {
+		font-size: 0.8rem;
+		font-style: normal;
+		opacity: 0.85;
+	}
+	.pending-assign-intro {
+		margin: 0 0 1rem;
+		font-size: 0.95rem;
+		color: var(--text-muted);
+	}
+	.pending-assign-search-wrap {
+		margin-bottom: 1rem;
+	}
+	.pending-assign-search-label {
+		display: block;
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		margin-bottom: 0.35rem;
+	}
+	.pending-assign-search {
+		width: 100%;
+		padding: 0.5rem 0.65rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg);
+		color: var(--text);
+		font-size: 0.95rem;
+	}
+	.pending-assign-empty {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 0.95rem;
+	}
+	.pending-assign-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: min(50vh, 360px);
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.pending-assign-racer-btn {
+		width: 100%;
+		text-align: left;
+		padding: 0.65rem 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-card);
+		cursor: pointer;
+		transition: border-color 0.15s, background 0.15s;
+	}
+	.pending-assign-racer-btn:hover:not(:disabled) {
+		border-color: var(--primary);
+		background: color-mix(in srgb, var(--primary) 6%, var(--bg-card));
+	}
+	.pending-assign-racer-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+	.pending-assign-racer-name {
+		display: block;
+		font-weight: 600;
+		color: var(--text);
+	}
+	.pending-assign-racer-meta {
+		display: block;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin-top: 0.2rem;
 	}
 	.racer-name {
 		font-weight: 600;
@@ -1769,6 +2321,69 @@
 		font-size: 0.85rem;
 		color: var(--text-muted);
 		margin: 0 0 0.75rem 0;
+	}
+	.racer-details-view {
+		margin-top: 0.25rem;
+	}
+	.racer-details-hint {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin: 0 0 0.75rem 0;
+	}
+	.racer-details-table {
+		width: 100%;
+	}
+	.th-sort {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.35rem 0.5rem;
+		margin: -0.35rem -0.5rem;
+		font: inherit;
+		font-weight: 600;
+		color: var(--text);
+		background: transparent;
+		border: none;
+		border-radius: var(--radius);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+		width: 100%;
+		justify-content: flex-start;
+	}
+	.th-sort:hover {
+		background: var(--bg-muted);
+	}
+	.th-sort:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--primary);
+	}
+	.th-sort.active {
+		color: var(--primary);
+	}
+	.th-sort-icon {
+		font-size: 0.85em;
+		opacity: 0.9;
+	}
+	.pwc-id-input {
+		width: 100%;
+		min-width: 6rem;
+		max-width: 14rem;
+		padding: 0.4rem 0.5rem;
+		font-size: 0.95rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg);
+		color: var(--text);
+	}
+	.pwc-id-input:focus {
+		outline: none;
+		border-color: var(--primary);
+	}
+	.pwc-id-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+		background: var(--bg-card);
 	}
 	.speed-table {
 		width: 100%;

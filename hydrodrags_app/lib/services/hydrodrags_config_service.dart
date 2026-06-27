@@ -1,44 +1,35 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
 import '../models/hydrodrags_config.dart';
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 
 /// Fetches HydroDrags public config (info tab content). No auth required.
 class HydroDragsConfigService {
-  /// GET /hydrodrags/config
   Future<HydroDragsConfig?> getConfig() async {
     try {
       final uri = Uri.parse(ApiConfig.hydrodragsConfigEndpoint);
-
-      if (kDebugMode) {
-        print('=== API Request: Get HydroDrags Config ===');
-        print('URL: $uri');
-      }
-
-      final response = await http.get(uri);
-
-      if (kDebugMode) {
-        print('=== API Response: HydroDrags Config ===');
-        print('Status Code: ${response.statusCode}');
-      }
+      final response = await LoggedHttp.get(uri);
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         return HydroDragsConfig.fromJson(json);
       } else {
-        if (kDebugMode) {
-          print('Failed to get config: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
+        AppLog.error(
+          'HydroDragsConfig',
+          AppLog.httpFailure('fetch config', response.statusCode),
+          recoverable: true,
+        );
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get HydroDrags config');
-      if (kDebugMode) {
-        print('Error getting HydroDrags config: $e');
-      }
+      AppLog.error(
+        'HydroDragsConfig',
+        'Failed to fetch config',
+        error: e,
+        stackTrace: stack,
+        recoverable: true,
+      );
       rethrow;
     }
   }

@@ -6,6 +6,7 @@
 	import { fetchEvent, updateEvent, deleteEvent, uploadEventImage } from '$lib/api/events';
 	import { toast } from '$lib/stores/toast';
 	import type { EventBase, EventUpdate } from '$lib/api/events';
+	import { isStaffPortal } from '$lib/admin-auth';
 
 	let loading = true;
 	let saving = false;
@@ -13,6 +14,9 @@
 	let event: EventBase | null = null;
 	let showDeleteModal = false;
 	let deleting = false;
+	$: eventReadOnly = staffPortal || event?.event_status === 'completed';
+
+	const staffPortal = isStaffPortal();
 
 	async function load() {
 		const id = $page.params.id;
@@ -30,7 +34,7 @@
 	}
 
 	async function handleSubmit(payload: EventUpdate) {
-		if (!event) return;
+		if (!event || staffPortal) return;
 		saving = true;
 		error = '';
 		const res = await updateEvent(event.id, payload);
@@ -44,7 +48,7 @@
 	}
 
 	async function handleUploadImage(file: File) {
-		if (!event) return;
+		if (!event || staffPortal) return;
 		const res = await uploadEventImage(event.id, file);
 		if (res.ok && res.data) {
 			toast('Image uploaded', 'success');
@@ -55,7 +59,7 @@
 	}
 
 	async function handleDelete() {
-		if (!event) return;
+		if (!event || staffPortal) return;
 		deleting = true;
 		const res = await deleteEvent(event.id);
 		deleting = false;
@@ -83,8 +87,8 @@
 {:else if event}
 	<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
 		<div>
-			<h1 class="page-title">Edit event</h1>
-			<p class="page-subtitle">{event.name}</p>
+			<h1 class="page-title">{staffPortal ? 'View event' : 'Edit event'}</h1>
+			<p class="page-subtitle">{event.name} · {event.event_status}</p>
 		</div>
 		<a href="/events/{event.id}/manage" class="btn btn-secondary">Manage registrations</a>
 	</div>
@@ -94,9 +98,10 @@
 		initial={event}
 		loading={saving}
 		{error}
+		readOnly={eventReadOnly}
 		onsubmit={handleSubmit}
-		ondelete={() => (showDeleteModal = true)}
-		onUploadImage={handleUploadImage}
+		ondelete={eventReadOnly ? undefined : () => (showDeleteModal = true)}
+		onUploadImage={eventReadOnly ? undefined : handleUploadImage}
 	/>
 {/if}
 

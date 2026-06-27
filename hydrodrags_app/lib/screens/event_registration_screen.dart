@@ -1,17 +1,20 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state_service.dart';
 import '../services/auth_service.dart';
+import '../services/waiver_service.dart';
+import '../waiver_capture/services/waiver_flow_router.dart';
 import '../services/pwc_service.dart';
-import '../services/racer_service.dart';
 import '../services/error_handler_service.dart';
+import '../utils/app_log.dart';
 import '../widgets/language_toggle.dart';
 import '../widgets/step_progress_indicator.dart';
 import '../models/event.dart';
 import '../models/event_registration.dart';
 import '../models/pwc.dart';
 import '../l10n/app_localizations.dart';
+import '../payments/mobile_payment_models.dart';
+import '../payments/mobile_payment_service.dart';
 import 'pwc_edit_screen.dart';
 
 class EventRegistrationScreen extends StatefulWidget {
@@ -34,7 +37,7 @@ class _ClassRow {
 }
 
 class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
-  // 0: Classes/PWC + IHRA, 1: Waiver, 2: Day passes, 3: Payment
+  // 0: Classes/PWC + IHRA, 1: Day passes → waiver (separate screens) → checkout
   int _currentStep = 0;
   final _step1FormKey = GlobalKey<FormState>();
 
@@ -47,9 +50,11 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
   // IHRA: if user doesn't have valid membership (number + purchased this year), they can add purchase
   bool _purchaseIhraMembership = false;
 
-  // Step 2: Spectator passes — $30 single day, $40 weekend
   int _spectatorSingleDayPasses = 0;
   int _spectatorWeekendPasses = 0;
+  PaymentPricing? _passPricing;
+  bool _hasSignedWaiver = false;
+  bool _loadingWaiverStatus = false;
 
   @override
   void initState() {
@@ -63,28 +68,6 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     });
     _loadPWCs();
     _loadExistingData();
-    _refreshRacerProfileForWaiverStatus();
-  }
-
-  /// Refresh racer profile from server so we have latest hasValidWaiver when deciding waiver step.
-  Future<void> _refreshRacerProfileForWaiverStatus() async {
-    if (!mounted) return;
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final appState = Provider.of<AppStateService>(context, listen: false);
-    final racerService = RacerService(authService);
-    try {
-      final profile = await racerService.getCurrentRacerProfile();
-      if (mounted && profile != null) {
-        appState.setRacerProfile(profile);
-        if (kDebugMode) {
-          print('[EventRegistration] Racer profile refreshed: hasValidWaiver=${profile.hasValidWaiver}, waiverSignedAt=${profile.waiverSignedAt}');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('[EventRegistration] Could not refresh racer profile for waiver status: $e');
-      }
-    }
   }
 
   Future<void> _loadPWCs() async {
@@ -135,17 +118,6 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
       _spectatorSingleDayPasses = registration.spectatorSingleDayPasses;
       _spectatorWeekendPasses = registration.spectatorWeekendPasses;
     }
-  }
-
-  /// True if user has a valid waiver (backend or in-app) and should skip the waiver step.
-  bool _shouldSkipWaiver() {
-    final appState = Provider.of<AppStateService>(context, listen: false);
-    final profile = appState.racerProfile;
-    final waiver = appState.waiverSignature;
-    final currentYear = DateTime.now().year;
-    final inAppWaiverValid = waiver != null && waiver.signedAt.year == currentYear;
-    final backendHasValidWaiver = profile?.hasValidWaiver == true;
-    return inAppWaiverValid || backendHasValidWaiver;
   }
 
   /// Valid IHRA = membership number present and purchased within current calendar year.
@@ -218,23 +190,73 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     final appState = Provider.of<AppStateService>(context, listen: false);
     appState.setEventRegistration(registration);
 
-    if (kDebugMode) {
-      final profile = appState.racerProfile;
-      final waiver = appState.waiverSignature;
-      print('[EventRegistration] Waiver check: racer.hasValidWaiver=${profile?.hasValidWaiver}, racer.waiverSignedAt=${profile?.waiverSignedAt}, appState.waiverSignature=${waiver != null ? "signed ${waiver.signedAt}" : "null"}, skipWaiver=${_shouldSkipWaiver()}');
-    }
-
-    if (_shouldSkipWaiver()) {
-      setState(() => _currentStep = 2);
-      return;
-    }
-
     setState(() => _currentStep = 1);
+    _loadPassPrices();
+    _refreshWaiverStatus();
   }
 
-  void _saveStep2DayPasses() {
+  Future<void> _refreshWaiverStatus() async {
+    final event = widget.event ?? Provider.of<AppStateService>(context, listen: false).selectedEvent;
+    if (event == null) return;
+
+    setState(() => _loadingWaiverStatus = true);
+    try {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final status = await WaiverService(auth).getStatus(event.id);
+      if (!mounted) return;
+      setState(() {
+        _hasSignedWaiver = status.hasSignedWaiver;
+        _loadingWaiverStatus = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingWaiverStatus = false);
+      }
+    }
+  }
+
+  Future<void> _loadPassPrices() async {
+    final event = widget.event ?? Provider.of<AppStateService>(context, listen: false).selectedEvent;
+    final reg = Provider.of<AppStateService>(context, listen: false).eventRegistration;
+    if (event == null || reg == null) return;
+
+    try {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final service = MobilePaymentService(
+        authHeaders: () async {
+          await auth.refreshTokenIfNeeded();
+          final token = await auth.getValidAccessToken();
+          if (token == null) throw Exception('No access token');
+          return {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          };
+        },
+      );
+      final quote = await service.quoteRegistration(
+        eventId: event.id,
+        classEntries: reg.classEntries
+            .map((e) => {'class_key': e.classKey, 'pwc_id': e.pwcId})
+            .toList(),
+        purchaseIhraMembership: reg.purchaseIhraMembership,
+        spectatorSingleDayPasses: _spectatorSingleDayPasses,
+        spectatorWeekendPasses: _spectatorWeekendPasses,
+      );
+      if (mounted) setState(() => _passPricing = quote);
+    } catch (e) {
+      AppLog.error(
+        'Registration',
+        'Failed to load pass pricing',
+        error: e,
+        recoverable: true,
+      );
+    }
+  }
+
+  Future<void> _proceedAfterDayPasses() async {
     final appState = Provider.of<AppStateService>(context, listen: false);
     final reg = appState.eventRegistration;
+    final event = widget.event ?? appState.selectedEvent;
     if (reg != null) {
       appState.setEventRegistration(EventRegistration(
         classEntries: reg.classEntries,
@@ -247,8 +269,24 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
         paymentStatus: reg.paymentStatus,
       ));
     }
-    if (mounted) {
-      Navigator.of(context).pushNamed('/checkout');
+    if (event == null || !mounted) return;
+
+    try {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final waiverService = WaiverService(auth);
+      if (_hasSignedWaiver) {
+        await WaiverFlowRouter.navigateToCheckout(context);
+        return;
+      }
+      await WaiverFlowRouter.navigateToNextStep(
+        context: context,
+        eventId: event.id,
+        waiverService: waiverService,
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandlerService.showError(context, e);
+      }
     }
   }
 
@@ -270,7 +308,7 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
         children: [
           StepProgressIndicator(
             currentStep: _currentStep + 1,
-            totalSteps: 4,
+            totalSteps: 2,
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -287,13 +325,9 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
   Widget _buildStep(int step) {
     switch (step) {
       case 0:
-        return _buildStep1(); // Classes/PWC + IHRA
+        return _buildStep1();
       case 1:
-        return _buildStep2(); // Waiver (navigates to waiver screens)
-      case 2:
-        return _buildStep2DayPasses(); // Spectator day passes
-      case 3:
-        return _buildStep3(); // Payment (placeholder)
+        return _buildStep2DayPasses();
       default:
         return const SizedBox();
     }
@@ -554,13 +588,17 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     );
   }
 
-  static const double _spectatorSingleDayPrice = 30.0;
-  static const double _spectatorWeekendPrice = 40.0;
-
-  /// Spectator day passes step (before checkout): $30 single day, $40 weekend.
   Widget _buildStep2DayPasses() {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final dayPrice = _passPricing?.spectatorSingleDayPrice;
+    final weekendPrice = _passPricing?.spectatorWeekendPrice;
+    final dayLabel = dayPrice != null
+        ? '${l10n.spectatorSingleDayPass} (\$${dayPrice.toStringAsFixed(0)})'
+        : l10n.spectatorSingleDayPass;
+    final weekendLabel = weekendPrice != null
+        ? '${l10n.spectatorWeekendPass} (\$${weekendPrice.toStringAsFixed(0)})'
+        : l10n.spectatorWeekendPass;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,18 +617,17 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        // Single day pass — $30
         Row(
           children: [
             Expanded(
-              child: Text(
-                l10n.spectatorSingleDayPass,
-                style: theme.textTheme.titleSmall,
-              ),
+              child: Text(dayLabel, style: theme.textTheme.titleSmall),
             ),
             IconButton.filled(
               onPressed: _spectatorSingleDayPasses > 0
-                  ? () => setState(() => _spectatorSingleDayPasses--)
+                  ? () {
+                      setState(() => _spectatorSingleDayPasses--);
+                      _loadPassPrices();
+                    }
                   : null,
               icon: const Icon(Icons.remove),
             ),
@@ -602,24 +639,26 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
               ),
             ),
             IconButton.filled(
-              onPressed: () => setState(() => _spectatorSingleDayPasses++),
+              onPressed: () {
+                setState(() => _spectatorSingleDayPasses++);
+                _loadPassPrices();
+              },
               icon: const Icon(Icons.add),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        // Weekend pass — $40
         Row(
           children: [
             Expanded(
-              child: Text(
-                l10n.spectatorWeekendPass,
-                style: theme.textTheme.titleSmall,
-              ),
+              child: Text(weekendLabel, style: theme.textTheme.titleSmall),
             ),
             IconButton.filled(
               onPressed: _spectatorWeekendPasses > 0
-                  ? () => setState(() => _spectatorWeekendPasses--)
+                  ? () {
+                      setState(() => _spectatorWeekendPasses--);
+                      _loadPassPrices();
+                    }
                   : null,
               icon: const Icon(Icons.remove),
             ),
@@ -631,69 +670,15 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
               ),
             ),
             IconButton.filled(
-              onPressed: () => setState(() => _spectatorWeekendPasses++),
+              onPressed: () {
+                setState(() => _spectatorWeekendPasses++);
+                _loadPassPrices();
+              },
               icon: const Icon(Icons.add),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildStep2() {
-    // This step will navigate to waiver screens
-    // For now, show a message and auto-navigate
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.of(context).pushReplacementNamed('/waiver-overview');
-    });
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            l10n.proceedingToWaiver,
-            style: theme.textTheme.bodyLarge,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep3() {
-    // Payment step - placeholder for now
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.payment,
-            size: 64,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.paymentStep,
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.paymentStepDescription,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 
@@ -718,43 +703,26 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
           children: [
             if (_currentStep > 0)
               OutlinedButton(
-                onPressed: () {
-                  final nextStep = _currentStep - 1;
-                  // From day passes (2) going back: skip waiver step (1) if user already has valid waiver
-                  if (nextStep == 1 && _shouldSkipWaiver()) {
-                    setState(() => _currentStep = 0);
-                  } else {
-                    setState(() => _currentStep = nextStep);
-                  }
-                },
+                onPressed: () => setState(() => _currentStep -= 1),
                 child: Text(l10n.previous),
               ),
             const Spacer(),
             ElevatedButton(
-              onPressed: () {
-                switch (_currentStep) {
-                  case 0:
-                    _saveStep1();
-                    break;
-                  case 1:
-                    // Waiver step auto-navigates; button not normally visible
-                    break;
-                  case 2:
-                    _saveStep2DayPasses();
-                    break;
-                  case 3:
-                    // Checkout is a separate screen; step 3 not used
-                    break;
+              onPressed: _loadingWaiverStatus && _currentStep == 1
+                  ? null
+                  : () {
+                if (_currentStep == 0) {
+                  _saveStep1();
+                } else {
+                  _proceedAfterDayPasses();
                 }
               },
               child: Text(
                 _currentStep == 0
                     ? l10n.next
-                    : _currentStep == 1
-                        ? l10n.continueToWaiver
-                        : _currentStep == 2
-                            ? l10n.next
-                            : l10n.completePayment,
+                    : (_hasSignedWaiver
+                        ? l10n.continueToCheckout
+                        : l10n.continueToWaiver),
               ),
             ),
           ],

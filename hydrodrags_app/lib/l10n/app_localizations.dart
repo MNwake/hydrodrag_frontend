@@ -227,6 +227,18 @@ abstract class AppLocalizations {
   /// **'Didn\'t receive a code?'**
   String get didntReceiveCode;
 
+  /// No description provided for @resendCodeDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend verification code?'**
+  String get resendCodeDialogTitle;
+
+  /// No description provided for @resendCodeDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your spam or junk folder before requesting a new code. Verification emails are sometimes filtered there.'**
+  String get resendCodeDialogMessage;
+
   /// No description provided for @codeExpired.
   ///
   /// In en, this message translates to:
@@ -1406,14 +1418,26 @@ abstract class AppLocalizations {
   /// No description provided for @pwcName.
   ///
   /// In en, this message translates to:
-  /// **'PWC Name'**
+  /// **'PWC racer number'**
   String get pwcName;
 
   /// No description provided for @pwcNameHint.
   ///
   /// In en, this message translates to:
-  /// **'Enter a name for your PWC'**
+  /// **'Enter your PWC racer number (digits only)'**
   String get pwcNameHint;
+
+  /// Validation when PWC racer number contains non-digits or is invalid
+  ///
+  /// In en, this message translates to:
+  /// **'Use digits only (at least one digit)'**
+  String get pwcRacerNumberDigitsOnly;
+
+  /// Subtitle line showing a registration's PWC racer number
+  ///
+  /// In en, this message translates to:
+  /// **'PWC racer #: {number}'**
+  String pwcRacerNumberDisplay(String number);
 
   /// Title for editing a PWC
   ///
@@ -1504,6 +1528,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue Offline'**
   String get continueOffline;
+
+  /// Title for app update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Update Available'**
+  String get updateAvailableTitle;
+
+  /// Intro message for app update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'A new version of HydroDrags is available.'**
+  String get updateAvailableMessage;
+
+  /// Button to open the app store for an update
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateButton;
+
+  /// Button to dismiss optional update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLaterButton;
 
   /// Placeholder for make dropdown
   ///
@@ -1733,6 +1781,12 @@ abstract class AppLocalizations {
   /// **'Continue to Waiver'**
   String get continueToWaiver;
 
+  /// Button text to proceed to checkout when waiver is already signed
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to Checkout'**
+  String get continueToCheckout;
+
   /// Button text to complete payment
   ///
   /// In en, this message translates to:
@@ -1886,13 +1940,13 @@ abstract class AppLocalizations {
   /// No description provided for @spectatorSingleDayPass.
   ///
   /// In en, this message translates to:
-  /// **'Single day pass (\$30)'**
+  /// **'Single day pass'**
   String get spectatorSingleDayPass;
 
   /// No description provided for @spectatorWeekendPass.
   ///
   /// In en, this message translates to:
-  /// **'Weekend pass (\$40)'**
+  /// **'Weekend pass'**
   String get spectatorWeekendPass;
 
   /// No description provided for @classesAndPwc.
@@ -2051,17 +2105,17 @@ abstract class AppLocalizations {
   /// **'We\'ve emailed your tickets to you! If they\'re not in your inbox, check your junk or spam folder. You can also screenshot the tickets below, show this screen at the gate, or have staff look them up by phone number.'**
   String get spectatorTicketCompleteNote;
 
+  /// Bottom navigation label for the rules tab
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
+  String get rulesTab;
+
   /// No description provided for @bracketsTab.
   ///
   /// In en, this message translates to:
   /// **'Brackets'**
   String get bracketsTab;
-
-  /// No description provided for @rulesTab.
-  ///
-  /// In en, this message translates to:
-  /// **'Rules'**
-  String get rulesTab;
 
   /// No description provided for @resultsTab.
   ///
@@ -2134,6 +2188,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session in progress'**
   String get speedSessionActive;
+
+  /// No description provided for @idCaptureFrontTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Government ID — Front'**
+  String get idCaptureFrontTitle;
+
+  /// No description provided for @idCaptureBackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Government ID — Back'**
+  String get idCaptureBackTitle;
+
+  /// No description provided for @idCaptureInstructionPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Place your government ID inside the frame'**
+  String get idCaptureInstructionPrimary;
+
+  /// No description provided for @idCaptureFrontInstructionPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo of the front of your government ID'**
+  String get idCaptureFrontInstructionPrimary;
+
+  /// No description provided for @idCaptureBackInstructionPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo of the back of your government ID'**
+  String get idCaptureBackInstructionPrimary;
+
+  /// No description provided for @idCaptureFrontSideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'FRONT'**
+  String get idCaptureFrontSideLabel;
+
+  /// No description provided for @idCaptureBackSideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'BACK'**
+  String get idCaptureBackSideLabel;
+
+  /// No description provided for @idCaptureInstructionSecondary.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit your ID inside the frame · Keep all corners visible · Avoid glare'**
+  String get idCaptureInstructionSecondary;
+
+  /// No description provided for @idCaptureBlurMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This image appears blurry. Please retake the photo.'**
+  String get idCaptureBlurMessage;
+
+  /// No description provided for @idCaptureGlareMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Excessive glare detected. Please move the ID or change lighting.'**
+  String get idCaptureGlareMessage;
+
+  /// No description provided for @idCaptureOcrMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t clearly read your government ID. Please retake the photo.'**
+  String get idCaptureOcrMessage;
+
+  /// No description provided for @idCaptureUsePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Use photo'**
+  String get idCaptureUsePhoto;
+
+  /// No description provided for @idCaptureRetake.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get idCaptureRetake;
+
+  /// No description provided for @idCaptureValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking photo quality…'**
+  String get idCaptureValidating;
+
+  /// No description provided for @idCaptureUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get idCaptureUploading;
+
+  /// No description provided for @idCaptureSkipBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip back (optional)'**
+  String get idCaptureSkipBack;
+
+  /// No description provided for @selfieCaptureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Selfie verification'**
+  String get selfieCaptureTitle;
+
+  /// No description provided for @selfieInstructionPrimary.
+  ///
+  /// In en, this message translates to:
+  /// **'Center your face inside the frame'**
+  String get selfieInstructionPrimary;
+
+  /// No description provided for @selfieInstructionSecondary.
+  ///
+  /// In en, this message translates to:
+  /// **'Look directly at the camera'**
+  String get selfieInstructionSecondary;
+
+  /// No description provided for @selfieRemoveAccessoriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove sunglasses or hats'**
+  String get selfieRemoveAccessoriesHint;
+
+  /// No description provided for @selfieFeedbackNoFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Center your face inside the frame'**
+  String get selfieFeedbackNoFace;
+
+  /// No description provided for @selfieFeedbackMoveCloser.
+  ///
+  /// In en, this message translates to:
+  /// **'Move closer'**
+  String get selfieFeedbackMoveCloser;
+
+  /// No description provided for @selfieFeedbackMoveFarther.
+  ///
+  /// In en, this message translates to:
+  /// **'Move farther away'**
+  String get selfieFeedbackMoveFarther;
+
+  /// No description provided for @selfieFeedbackCenterFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Center your face'**
+  String get selfieFeedbackCenterFace;
+
+  /// No description provided for @selfieFeedbackNotFullyVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your full face visible'**
+  String get selfieFeedbackNotFullyVisible;
+
+  /// No description provided for @selfieFeedbackReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold still…'**
+  String get selfieFeedbackReady;
+
+  /// No description provided for @selfieBlurMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your selfie appears blurry. Please retake it.'**
+  String get selfieBlurMessage;
+
+  /// No description provided for @selfieTooDarkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase the lighting and try again.'**
+  String get selfieTooDarkMessage;
+
+  /// No description provided for @selfieTooBrightMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Too much light detected. Adjust lighting and try again.'**
+  String get selfieTooBrightMessage;
+
+  /// No description provided for @selfieNoFaceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your face could not be detected. Please retake the selfie.'**
+  String get selfieNoFaceMessage;
+
+  /// No description provided for @selfieMultipleFacesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple faces detected. Only you should be in the photo.'**
+  String get selfieMultipleFacesMessage;
+
+  /// No description provided for @selfieFaceSizeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Move closer or farther so your face fills the frame.'**
+  String get selfieFaceSizeMessage;
+
+  /// No description provided for @selfieValidating.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking selfie…'**
+  String get selfieValidating;
+
+  /// No description provided for @selfieUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading selfie…'**
+  String get selfieUploading;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

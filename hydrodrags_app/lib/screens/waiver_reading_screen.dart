@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../services/app_state_service.dart';
 import '../widgets/language_toggle.dart';
 import '../l10n/app_localizations.dart';
+import '../waiver_capture/widgets/waiver_flow_progress.dart';
+import '../waiver_capture/services/waiver_flow_router.dart';
 
 class WaiverReadingScreen extends StatefulWidget {
   const WaiverReadingScreen({super.key});
@@ -20,6 +22,9 @@ class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WaiverFlowRouter.redirectIfSignedForRegistration(context);
+    });
   }
 
   @override
@@ -40,7 +45,8 @@ class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
   }
 
   void _continueToSign() {
-    Navigator.of(context).pushNamed('/waiver-signature');
+    final sessionId = ModalRoute.of(context)?.settings.arguments as String?;
+    Navigator.of(context).pushNamed('/waiver-signature', arguments: sessionId);
   }
 
   @override
@@ -76,6 +82,13 @@ class _WaiverReadingScreenState extends State<WaiverReadingScreen> {
       ),
       body: Column(
         children: [
+          WaiverFlowProgressHeader(
+            currentStep: WaiverFlowStep.waiver,
+            idFrontComplete: true,
+            idBackSkipped: true,
+            selfieComplete: true,
+            waiverReadComplete: _hasScrolledToEnd,
+          ),
           LinearProgressIndicator(
             value: _hasScrolledToEnd
                 ? 1.0

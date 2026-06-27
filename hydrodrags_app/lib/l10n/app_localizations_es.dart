@@ -75,6 +75,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get didntReceiveCode => '¿No recibiste el código?';
 
   @override
+  String get resendCodeDialogTitle => '¿Reenviar código de verificación?';
+
+  @override
+  String get resendCodeDialogMessage => 'Revise su carpeta de spam o correo no deseado antes de solicitar un código nuevo. Los correos de verificación a veces se filtran allí.';
+
+  @override
   String get codeExpired => 'Código expirado. Por favor solicite uno nuevo';
 
   @override
@@ -667,10 +673,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addPWC => 'Agregar PWC';
 
   @override
-  String get pwcName => 'Nombre del PWC';
+  String get pwcName => 'Número de corredor del PWC';
 
   @override
-  String get pwcNameHint => 'Ingrese un nombre para su PWC';
+  String get pwcNameHint => 'Ingrese el número de corredor de su PWC (solo dígitos)';
+
+  @override
+  String get pwcRacerNumberDigitsOnly => 'Solo se permiten dígitos (al menos un dígito)';
+
+  @override
+  String pwcRacerNumberDisplay(String number) {
+    return 'PWC corredor n.º: $number';
+  }
 
   @override
   String get editPWC => 'Editar PWC';
@@ -716,6 +730,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get continueOffline => 'Continuar sin conexión';
+
+  @override
+  String get updateAvailableTitle => 'Actualización disponible';
+
+  @override
+  String get updateAvailableMessage => 'Hay una nueva versión de HydroDrags disponible.';
+
+  @override
+  String get updateButton => 'Actualizar';
+
+  @override
+  String get updateLaterButton => 'Más tarde';
 
   @override
   String get selectMake => 'Seleccionar Marca';
@@ -834,6 +860,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get continueToWaiver => 'Continuar a la Renuncia';
 
   @override
+  String get continueToCheckout => 'Continuar al pago';
+
+  @override
   String get completePayment => 'Completar Pago';
 
   @override
@@ -909,10 +938,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dayPassesQuantity => 'Cantidad de pases de día';
 
   @override
-  String get spectatorSingleDayPass => 'Pase de un día (\$30)';
+  String get spectatorSingleDayPass => 'Pase de un día';
 
   @override
-  String get spectatorWeekendPass => 'Pase de fin de semana (\$40)';
+  String get spectatorWeekendPass => 'Pase de fin de semana';
 
   @override
   String get classesAndPwc => 'Clases y PWC';
@@ -993,10 +1022,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get spectatorTicketCompleteNote => '¡Le hemos enviado sus entradas por correo! Si no están en su bandeja de entrada, revise la carpeta de correo no deseado o spam. También puede tomar una captura de pantalla de las entradas a continuación, mostrar esta pantalla en la puerta o pedir al personal que las busque por número de teléfono.';
 
   @override
-  String get bracketsTab => 'Llaves';
+  String get rulesTab => 'Reglas';
 
   @override
-  String get rulesTab => 'Reglas';
+  String get bracketsTab => 'Llaves';
 
   @override
   String get resultsTab => 'Resultados';
@@ -1033,4 +1062,106 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get speedSessionActive => 'Sesión en curso';
+
+  @override
+  String get idCaptureFrontTitle => 'Identificación — Frente';
+
+  @override
+  String get idCaptureBackTitle => 'Identificación — Reverso';
+
+  @override
+  String get idCaptureInstructionPrimary => 'Coloque su identificación dentro del marco';
+
+  @override
+  String get idCaptureFrontInstructionPrimary => 'Tome una foto del frente de su identificación oficial';
+
+  @override
+  String get idCaptureBackInstructionPrimary => 'Tome una foto del reverso de su identificación oficial';
+
+  @override
+  String get idCaptureFrontSideLabel => 'FRENTE';
+
+  @override
+  String get idCaptureBackSideLabel => 'REVERSO';
+
+  @override
+  String get idCaptureInstructionSecondary => 'Ajuste su identificación dentro del marco · Mantenga las esquinas visibles · Evite el brillo';
+
+  @override
+  String get idCaptureBlurMessage => 'Esta imagen parece borrosa. Por favor, tome la foto de nuevo.';
+
+  @override
+  String get idCaptureGlareMessage => 'Se detectó brillo excesivo. Mueva la identificación o cambie la iluminación.';
+
+  @override
+  String get idCaptureOcrMessage => 'No pudimos leer claramente su identificación. Por favor, tome la foto de nuevo.';
+
+  @override
+  String get idCaptureUsePhoto => 'Usar foto';
+
+  @override
+  String get idCaptureRetake => 'Repetir';
+
+  @override
+  String get idCaptureValidating => 'Verificando calidad…';
+
+  @override
+  String get idCaptureUploading => 'Subiendo…';
+
+  @override
+  String get idCaptureSkipBack => 'Omitir reverso (opcional)';
+
+  @override
+  String get selfieCaptureTitle => 'Verificación con selfie';
+
+  @override
+  String get selfieInstructionPrimary => 'Centre su rostro dentro del marco';
+
+  @override
+  String get selfieInstructionSecondary => 'Mire directamente a la cámara';
+
+  @override
+  String get selfieRemoveAccessoriesHint => 'Quítese gafas de sol o sombreros';
+
+  @override
+  String get selfieFeedbackNoFace => 'Centre su rostro dentro del marco';
+
+  @override
+  String get selfieFeedbackMoveCloser => 'Acérquese';
+
+  @override
+  String get selfieFeedbackMoveFarther => 'Aléjese';
+
+  @override
+  String get selfieFeedbackCenterFace => 'Centre su rostro';
+
+  @override
+  String get selfieFeedbackNotFullyVisible => 'Mantenga todo el rostro visible';
+
+  @override
+  String get selfieFeedbackReady => 'Quédese quieto…';
+
+  @override
+  String get selfieBlurMessage => 'Su selfie parece borrosa. Por favor, tómela de nuevo.';
+
+  @override
+  String get selfieTooDarkMessage => 'Aumente la iluminación e intente de nuevo.';
+
+  @override
+  String get selfieTooBrightMessage => 'Hay demasiada luz. Ajuste la iluminación e intente de nuevo.';
+
+  @override
+  String get selfieNoFaceMessage => 'No se pudo detectar su rostro. Por favor, tome el selfie de nuevo.';
+
+  @override
+  String get selfieMultipleFacesMessage => 'Se detectaron varios rostros. Solo usted debe aparecer en la foto.';
+
+  @override
+  String get selfieFaceSizeMessage => 'Acérquese o aléjese para que su rostro llene el marco.';
+
+  @override
+  String get selfieValidating => 'Verificando selfie…';
+
+  @override
+  String get selfieUploading => 'Subiendo selfie…';
 }

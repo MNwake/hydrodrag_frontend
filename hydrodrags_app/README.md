@@ -41,7 +41,7 @@ lib/
 ├── screens/         # Full-screen UIs (login, main tabs, event detail, checkout, results, …)
 ├── services/        # API and business logic (auth, racer, PWC, event, checkout, config)
 ├── theme/           # Material theme and styling
-├── utils/           # Helpers (e.g. phone formatting)
+├── utils/           # Helpers (AppLog, phone formatting); see utils/LOGGING.md
 └── widgets/         # Reusable components (bracket column, etc.)
 ```
 

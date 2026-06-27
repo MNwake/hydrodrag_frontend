@@ -83,6 +83,26 @@ export async function fetchRacerPwcs(racerId: string) {
 	);
 }
 
+export interface RacerPwcCreatePayload {
+	make: string;
+	model: string;
+	year?: number;
+	engine_size?: string;
+	engine_class?: string;
+	color?: string;
+	registration_number?: string;
+	serial_number?: string;
+	is_primary?: boolean;
+}
+
+/** POST /admin/racers/{racer_id}/pwcs — create a PWC document for a racer. */
+export async function createRacerPwc(racerId: string, payload: RacerPwcCreatePayload) {
+	return apiPost<RacerPwcRow>(
+		ensureSlash(`/admin/racers/${encodeURIComponent(racerId)}/pwcs`),
+		payload
+	);
+}
+
 export interface RacerCreatePayload {
 	email: string;
 	first_name?: string;
@@ -298,13 +318,24 @@ export async function fetchRegistrations(): Promise<{
 						}
 					}
 
+					const collected = reg.amount_collected ?? 0;
+					const statusLabel =
+						reg.payment_status_label ??
+						(reg.is_paid ? 'Paid' : 'Unpaid');
+					const amountDisplay =
+						collected > 0
+							? `$${collected.toFixed(2)}`
+							: statusLabel === 'Free' || statusLabel === 'Complimentary'
+								? '$0'
+								: amount;
+
 					registrations.push({
 						row: {
 							id: reg.id,
 							racer_name: racerName,
 							class_name: reg.class_name ?? '—',
-							status: reg.is_paid ? 'Paid' : 'Unpaid',
-							amount,
+							status: statusLabel,
+							amount: amountDisplay,
 							registration_date: registrationDate
 						},
 						reg
@@ -346,80 +377,3 @@ export async function fetchRegistrations(): Promise<{
 	}
 }
 
-/** GET /admin/dashboard/counts — events, racers, registrations, revenue breakdown, spectator passes. */
-export async function fetchDashboardCounts(): Promise<{
-	events: number;
-	racers: number;
-	registrations: number;
-	event_revenue: number;
-	spectator_revenue: number;
-	membership_revenue: number;
-	dayPasses: number;
-	weekendPasses: number;
-	error: string | null;
-}> {
-	const res = await apiGet<{
-		events: number;
-		racers: number;
-		registrations: number;
-		event_revenue: number;
-		spectator_revenue: number;
-		membership_revenue: number;
-		dayPasses: number;
-		weekendPasses: number;
-	}>(ensureSlash('/admin/dashboard/counts'));
-
-	if (!res.ok) {
-		return {
-			events: 0,
-			racers: 0,
-			registrations: 0,
-			event_revenue: 0,
-			spectator_revenue: 0,
-			membership_revenue: 0,
-			dayPasses: 0,
-			weekendPasses: 0,
-			error: res.error ?? 'Failed to load dashboard counts'
-		};
-	}
-
-	const d = res.data;
-	return {
-		events: d?.events ?? 0,
-		racers: d?.racers ?? 0,
-		registrations: d?.registrations ?? 0,
-		event_revenue: d?.event_revenue ?? 0,
-		spectator_revenue: d?.spectator_revenue ?? 0,
-		membership_revenue: d?.membership_revenue ?? 0,
-		dayPasses: d?.dayPasses ?? 0,
-		weekendPasses: d?.weekendPasses ?? 0,
-		error: null
-	};
-}
-
-/** GET /admin/dashboard/charts — registrations over time, racers per class. */
-export async function fetchDashboardCharts(): Promise<{
-	registrations_over_time: { period: string; count: number }[];
-	racers_per_class: { class_key: string; class_name: string; count: number }[];
-	error: string | null;
-}> {
-	const res = await apiGet<{
-		registrations_over_time: { period: string; count: number }[];
-		racers_per_class: { class_key: string; class_name: string; count: number }[];
-	}>(ensureSlash('/admin/dashboard/charts'));
-
-	if (!res.ok) {
-		return {
-			registrations_over_time: [],
-			racers_per_class: [],
-			error: res.error ?? 'Failed to load dashboard charts'
-		};
-	}
-
-	const d = res.data;
-	return {
-		registrations_over_time: d?.registrations_over_time ?? [],
-		racers_per_class: d?.racers_per_class ?? [],
-		error: null
-	};
-}

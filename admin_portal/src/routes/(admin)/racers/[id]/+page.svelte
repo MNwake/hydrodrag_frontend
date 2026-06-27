@@ -8,16 +8,24 @@
 	} from '$lib/api/resources';
 	import { fetchRegistrationsByRacer } from '$lib/api/registrations';
 	import type { EventRegistrationAdmin } from '$lib/api/registrations';
+	import { fetchWaiverSessions, type WaiverSessionListItem } from '$lib/api/waiver_sessions';
+	import { fetchWaivers, type WaiverListItem } from '$lib/api/waivers';
 	import { toast } from '$lib/stores/toast';
+	import { formatDateLocal, formatDateTimeLocal, parseApiDateTime } from '$lib/format/datetime';
+	import { isStaffPortal } from '$lib/admin-auth';
 
 	let loading = true;
 	let error: string | null = null;
 	let racer: RacerProfile | null = null;
 	let registrations: EventRegistrationAdmin[] = [];
+	let signedWaivers: WaiverListItem[] = [];
+	let waiverSessions: WaiverSessionListItem[] = [];
 	let waiverDownloading: number | null = null;
 
 	let editing = false;
 	let saving = false;
+
+	const staffPortal = isStaffPortal();
 
 	type RacerEditForm = {
 		email: string;
@@ -91,8 +99,8 @@
 
 	function toDatetimeLocal(iso: string | null | undefined): string {
 		if (!iso) return '';
-		const d = new Date(iso);
-		if (Number.isNaN(d.getTime())) return '';
+		const d = parseApiDateTime(iso);
+		if (!d) return '';
 		const p = (n: number) => String(n).padStart(2, '0');
 		return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 	}
@@ -185,7 +193,7 @@
 	}
 
 	async function saveProfile() {
-		if (!racer || saving) return;
+		if (!racer || saving || staffPortal) return;
 		if (!form.email.trim()) {
 			toast('Email is required', 'error');
 			return;
@@ -212,15 +220,11 @@
 	}
 
 	function fmtDate(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+		return formatDateLocal(iso);
 	}
 
 	function fmtDateTime(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+		return formatDateTimeLocal(iso);
 	}
 
 	async function onDownloadWaiver(racerId: string, index: number) {
@@ -239,6 +243,14 @@
 		return '—';
 	}
 
+	function sessionUploadSummary(s: WaiverSessionListItem): string {
+		const parts: string[] = [];
+		if (s.government_id_front_uploaded) parts.push('ID front');
+		if (s.government_id_back_uploaded) parts.push('ID back');
+		if (s.selfie_uploaded) parts.push('Selfie');
+		return parts.length > 0 ? parts.join(', ') : 'None';
+	}
+
 	async function load() {
 		const id = $page.params.id;
 		if (!id) return;
@@ -247,6 +259,8 @@
 		error = null;
 		racer = null;
 		registrations = [];
+		signedWaivers = [];
+		waiverSessions = [];
 		const res = await fetchRacer(id);
 		if (!res.ok) {
 			loading = false;
@@ -254,14 +268,25 @@
 			return;
 		}
 		racer = res.data;
-		const regsRes = await fetchRegistrationsByRacer(id);
+		const [regsRes, signedRes, sessionsRes] = await Promise.all([
+			fetchRegistrationsByRacer(id),
+			fetchWaivers({ racer_id: id, limit: 100 }),
+			fetchWaiverSessions({ racer_id: id, limit: 100 })
+		]);
 		loading = false;
 		if (regsRes.ok && Array.isArray(regsRes.data)) {
 			registrations = regsRes.data;
 		}
+		if (signedRes.ok && Array.isArray(signedRes.data)) {
+			signedWaivers = signedRes.data;
+		}
+		if (sessionsRes.ok && Array.isArray(sessionsRes.data)) {
+			waiverSessions = sessionsRes.data;
+		}
 	}
 
 	function startEditing() {
+		if (staffPortal) return;
 		if (racer) syncFormFromRacer(racer);
 		editing = true;
 	}
@@ -275,14 +300,14 @@
 	style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;"
 >
 	<div>
-		<h1 class="page-title">Racer profile</h1>
+		<h1 class="page-title">{staffPortal ? 'Racer profile (view-only)' : 'Racer profile'}</h1>
 		<p class="page-subtitle">{racer ? fullName(racer) : '—'}</p>
 	</div>
 	<div class="page-header-actions">
 		{#if racer}
-			{#if !editing}
+			{#if !editing && !staffPortal}
 				<button type="button" class="btn btn-primary" on:click={startEditing}>Edit profile</button>
-			{:else}
+			{:else if editing && !staffPortal}
 				<button type="button" class="btn btn-secondary" on:click={() => (editing = false)} disabled={saving}
 					>Cancel</button
 				>
@@ -398,7 +423,7 @@
 				<dd>{fmtDateTime(racer.waiver_signed_at)}</dd>
 				<dt>Valid waiver</dt>
 				<dd>{racer.has_valid_waiver === true ? 'Yes' : 'No'}</dd>
-				<dt>Waivers</dt>
+				<dt>Legacy waivers</dt>
 				<dd>
 					{#if racer.waiver_paths && racer.waiver_paths.length > 0}
 						<ul class="waiver-list">
@@ -413,6 +438,38 @@
 									>
 										{waiverDownloading === i ? 'Downloading…' : 'Download'}
 									</button>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						—
+					{/if}
+				</dd>
+				<dt>Signed event waivers</dt>
+				<dd>
+					{#if signedWaivers.length > 0}
+						<ul class="waiver-list">
+							{#each signedWaivers as w}
+								<li class="waiver-item">
+									<a href="/waivers/{w.id}" class="waiver-link">{w.event_name}</a>
+									<span class="waiver-meta">{fmtDateTime(w.signed_at_utc)} · v{w.waiver_version}</span>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						—
+					{/if}
+				</dd>
+				<dt>Waiver sessions</dt>
+				<dd>
+					{#if waiverSessions.length > 0}
+						<ul class="waiver-list">
+							{#each waiverSessions as s}
+								<li class="waiver-item">
+									<a href="/waiver-sessions/{s.id}" class="waiver-link">{s.event_name}</a>
+									<span class="waiver-meta">
+										{s.status} · {sessionUploadSummary(s)} · expires {fmtDateTime(s.expires_at)}
+									</span>
 								</li>
 							{/each}
 						</ul>
@@ -802,5 +859,17 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.waiver-link {
+		font-weight: 500;
+		color: var(--primary, #2563eb);
+		text-decoration: none;
+	}
+	.waiver-link:hover {
+		text-decoration: underline;
+	}
+	.waiver-meta {
+		font-size: 0.85em;
+		color: var(--text-muted);
 	}
 </style>

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
 import '../models/spectator_ticket.dart';
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 
 /// Response from create spectator checkout.
 class SpectatorCreateCheckoutResponse {
@@ -69,24 +70,16 @@ class SpectatorCheckoutService {
         'purchaser_zip': purchaserZip,
         'spectator_single_day_passes': spectatorSingleDayPasses,
         'spectator_weekend_passes': spectatorWeekendPasses,
+        'event_id': eventId,
       };
       final bodyJson = jsonEncode(body);
       const headers = {'Content-Type': 'application/json'};
 
-      if (kDebugMode) {
-        debugPrint('[SpectatorCheckout] POST $uri');
-        debugPrint('[SpectatorCheckout] body: $bodyJson');
-      }
-
-      final response = await http.post(
+      final response = await LoggedHttp.post(
         uri,
         headers: headers,
         body: bodyJson,
       );
-
-      if (kDebugMode) {
-        debugPrint('[SpectatorCheckout] status: ${response.statusCode}, body: ${response.body}');
-      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -94,8 +87,7 @@ class SpectatorCheckoutService {
       }
       return null;
     } catch (e, stack) {
-      logApiError(e, stack, 'Spectator checkout create');
-      if (kDebugMode) debugPrint('[SpectatorCheckout] create error: $e');
+      AppLog.error('SpectatorCheckout', 'Payment failed', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -112,26 +104,21 @@ class SpectatorCheckoutService {
       final bodyJson = jsonEncode(body);
       const headers = {'Content-Type': 'application/json'};
 
-      if (kDebugMode) {
-        debugPrint('[SpectatorCheckout] capture POST $uri');
-        debugPrint('[SpectatorCheckout] body: $bodyJson');
-      }
-
-      final response = await http.post(
+      final response = await LoggedHttp.post(
         uri,
         headers: headers,
         body: bodyJson,
       );
 
-      if (kDebugMode) {
-        debugPrint('[SpectatorCheckout] capture status: ${response.statusCode}, body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return SpectatorCaptureResponse.fromJson(json);
       }
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return SpectatorCaptureResponse.fromJson(json);
+      // Defensive fallback so UI surfaces a controlled failure instead of a JSON parse crash.
+      return SpectatorCaptureResponse(success: false, tickets: const []);
     } catch (e, stack) {
-      logApiError(e, stack, 'Spectator checkout capture');
-      if (kDebugMode) debugPrint('[SpectatorCheckout] capture error: $e');
+      AppLog.error('SpectatorCheckout', 'Payment failed', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }

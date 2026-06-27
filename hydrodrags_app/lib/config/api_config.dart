@@ -17,6 +17,26 @@ class ApiConfig {
   static String get hydrodragsConfigEndpoint => '$baseUrl/hydrodrags/config';
   static String get addPwcEndpoint => '$baseUrl/me/pwc';
   static String get waiverUploadEndpoint => '$baseUrl/me/waiver';
+
+  /// Event-scoped waiver API
+  static String eventWaiverStatus(String eventId) =>
+      '$baseUrl/mobile/events/$eventId/waiver/status';
+  static String eventWaiverSession(String eventId) =>
+      '$baseUrl/mobile/events/$eventId/waiver/session';
+  static String eventWaiverReplacementSession(String eventId) =>
+      '$baseUrl/mobile/events/$eventId/waiver/replacement-session';
+  static String get eligibleWaiverEvents =>
+      '$baseUrl/mobile/waivers/eligible-events';
+  static String waiverSession(String sessionId) =>
+      '$baseUrl/mobile/waiver-sessions/$sessionId';
+  static String waiverSessionGovernmentId(String sessionId) =>
+      '$baseUrl/mobile/waiver-sessions/$sessionId/government-id';
+  static String waiverSessionSelfie(String sessionId) =>
+      '$baseUrl/mobile/waiver-sessions/$sessionId/selfie';
+  static String waiverSessionSign(String sessionId) =>
+      '$baseUrl/mobile/waiver-sessions/$sessionId/sign';
+  static String myEventWaiver(String eventId) =>
+      '$baseUrl/me/events/$eventId/waiver';
   static String get myTicketsEndpoint => '$baseUrl/me/tickets';
   static String get myRegistrationsEndpoint => '$baseUrl/me/registrations';
 
@@ -27,21 +47,25 @@ class ApiConfig {
   /// POST /registrations/promo/verify — verify promo code (valid, code, type)
   static String get promoVerify => '$baseUrl/registrations/promo/verify';
 
-  /// POST /paypal/events/{event_id}/checkout/create — create PayPal order
-  static String checkoutCreate(String eventId) =>
-      '$baseUrl/paypal/events/$eventId/checkout/create';
+  /// Mobile payment API (replaces legacy /paypal mobile checkout routes)
+  static String get mobilePaymentsQuote => '$baseUrl/mobile/payments/quote';
+  static String get mobilePaymentsStart => '$baseUrl/mobile/payments/start';
+  static String mobilePaymentStatus(String paymentId) =>
+      '$baseUrl/mobile/payments/$paymentId/status';
+  static String mobilePaymentApprove(String paymentId) =>
+      '$baseUrl/mobile/payments/$paymentId/approve';
+  static String mobilePaymentCancel(String paymentId) =>
+      '$baseUrl/mobile/payments/$paymentId/cancel';
+  static String mobilePaymentCheckoutOpened(String paymentId) =>
+      '$baseUrl/mobile/payments/$paymentId/checkout-opened';
 
-  /// POST /paypal/events/{event_id}/checkout/capture — capture PayPal order after user approves
-  static String checkoutCapture(String eventId) =>
-      '$baseUrl/paypal/events/$eventId/checkout/capture';
+  /// PayPal SDK return URL — must match PayPal Developer Dashboard + native config
+  static const String paypalReturnUrl =
+      'com.koesterventures.hydrodrags://paypalpay';
 
-  /// POST /paypal/spectator-checkout/create — create spectator-only PayPal order (no auth)
-  static String get spectatorCheckoutCreate =>
-      '$baseUrl/paypal/spectator-checkout/create';
-
-  /// POST /paypal/spectator-checkout/capture — capture spectator PayPal order (no auth)
-  static String get spectatorCheckoutCapture =>
-      '$baseUrl/paypal/spectator-checkout/capture';
+  /// GET /events/{event_id}/results — finalized placements for a completed event
+  static String eventResults(String eventId) =>
+      '$baseUrl/events/$eventId/results';
 
   /// GET /events/{event_id}/rounds — list bracket rounds for an event
   /// Pass [classKey] to filter by racing class.

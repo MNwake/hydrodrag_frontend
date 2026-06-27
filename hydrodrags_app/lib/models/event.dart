@@ -1,8 +1,7 @@
-enum EventRegistrationStatus {
-  open,
-  closed,
-  upcoming, // Registration not yet open
-  past, // Event has ended
+enum EventStatus {
+  draft,
+  posted,
+  completed,
 }
 
 /// Schedule item for a specific day/time
@@ -254,7 +253,7 @@ class Event {
   final String? format;
 
   // Status
-  final EventRegistrationStatus registrationStatus;
+  final EventStatus eventStatus;
 
   // Results (optional, populated after event)
   final String? resultsUrl; // URL to results page/document
@@ -282,7 +281,7 @@ class Event {
     this.rules = const [],
     required this.eventInfo,
     this.format,
-    required this.registrationStatus,
+    required this.eventStatus,
     this.resultsUrl,
     this.results,
     required this.createdAt,
@@ -327,7 +326,9 @@ class Event {
           ? EventInfo.fromJson(json['event_info'] as Map<String, dynamic>)
           : EventInfo(),
       format: json['format'] as String?,
-      registrationStatus: _parseRegistrationStatus(json['registration_status'] as String? ?? 'closed'),
+      eventStatus: _parseEventStatus(
+        (json['event_status'] as String?) ?? _legacyStatusToEventStatus(json['registration_status'] as String?),
+      ),
       resultsUrl: json['results_url'] as String?,
       results: json['results'] as Map<String, dynamic>?,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -354,7 +355,7 @@ class Event {
       'rules': rules.map((item) => item.toJson()).toList(),
       'event_info': eventInfo.toJson(),
       'format': format,
-      'registration_status': _registrationStatusToString(registrationStatus),
+      'event_status': _eventStatusToString(eventStatus),
       'results_url': resultsUrl,
       'results': results,
       'created_at': createdAt.toIso8601String(),
@@ -364,36 +365,55 @@ class Event {
     };
   }
 
-  static EventRegistrationStatus _parseRegistrationStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'open':
-        return EventRegistrationStatus.open;
-      case 'closed':
-        return EventRegistrationStatus.closed;
-      case 'upcoming':
-        return EventRegistrationStatus.upcoming;
+  static String _legacyStatusToEventStatus(String? status) {
+    switch ((status ?? '').toLowerCase()) {
       case 'past':
-        return EventRegistrationStatus.past;
+        return 'completed';
+      case 'upcoming':
+      case 'open':
+      case 'closed':
+        return 'posted';
       default:
-        return EventRegistrationStatus.closed;
+        return 'draft';
     }
   }
 
-  static String _registrationStatusToString(EventRegistrationStatus status) {
+  static EventStatus _parseEventStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'posted':
+        return EventStatus.posted;
+      case 'completed':
+        return EventStatus.completed;
+      case 'draft':
+        return EventStatus.draft;
+      default:
+        return EventStatus.draft;
+    }
+  }
+
+  static String _eventStatusToString(EventStatus status) {
     switch (status) {
-      case EventRegistrationStatus.open:
-        return 'open';
-      case EventRegistrationStatus.closed:
-        return 'closed';
-      case EventRegistrationStatus.upcoming:
-        return 'upcoming';
-      case EventRegistrationStatus.past:
-        return 'past';
+      case EventStatus.draft:
+        return 'draft';
+      case EventStatus.posted:
+        return 'posted';
+      case EventStatus.completed:
+        return 'completed';
     }
   }
 
   /// Check if registration is currently open
-  bool get isOpen => registrationStatus == EventRegistrationStatus.open;
+  bool get isOpen {
+    if (eventStatus != EventStatus.posted) {
+      return false;
+    }
+    final now = DateTime.now().toUtc();
+    final opens = registrationOpenDate?.toUtc();
+    final closes = registrationCloseDate?.toUtc();
+    final afterOpen = opens == null || !now.isBefore(opens);
+    final beforeClose = closes == null || !now.isAfter(closes);
+    return afterOpen && beforeClose;
+  }
 
   /// True if event format is top-speed (speed rankings). False for bracket / double elimination.
   bool get isTopSpeed => format == 'top_speed';
@@ -402,13 +422,10 @@ class Event {
   bool get isBracketFormat => format == null || format == 'double_elimination';
 
   /// Check if event is in the past
-  bool get isPast {
-    final end = endDate ?? startDate;
-    return end.isBefore(DateTime.now());
-  }
+  bool get isPast => eventStatus == EventStatus.completed;
 
   /// Check if event is upcoming (not started yet)
-  bool get isUpcoming => startDate.isAfter(DateTime.now());
+  bool get isUpcoming => eventStatus == EventStatus.posted;
 
   /// Schedule sorted by day then start_time (matches backend ordered_schedule)
   List<EventScheduleItem> get orderedSchedule {

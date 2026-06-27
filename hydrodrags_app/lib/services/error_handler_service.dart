@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_log.dart';
 
 /// Centralized error handling service
 class ErrorHandlerService {
@@ -75,10 +75,7 @@ class ErrorHandlerService {
         ),
       );
     } catch (e) {
-      // Context is deactivated or ScaffoldMessenger not available, just log the error
-      if (kDebugMode) {
-        print('Could not show error snackbar: $e');
-      }
+      AppLog.debug('ErrorHandler', 'Could not show error snackbar');
     }
   }
 
@@ -115,20 +112,14 @@ class ErrorHandlerService {
     );
   }
 
-  /// Log error (for debugging and analytics)
+  /// Log error for troubleshooting (routes through [AppLog.error]).
   static void logError(dynamic error, {StackTrace? stackTrace, String? context}) {
-    if (kDebugMode) {
-      print('=== ERROR ===');
-      if (context != null) {
-        print('Context: $context');
-      }
-      print('Error: $error');
-      if (stackTrace != null) {
-        print('Stack Trace: $stackTrace');
-      }
-      print('=============');
-    }
-    // TODO: Add analytics/crash reporting integration
+    AppLog.error(
+      context ?? 'ErrorHandler',
+      'Unhandled error',
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Handle API error with retry logic

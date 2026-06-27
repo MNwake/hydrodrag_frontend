@@ -1,4 +1,4 @@
-d<script lang="ts">
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import {
 		fetchHydroDragsConfig,

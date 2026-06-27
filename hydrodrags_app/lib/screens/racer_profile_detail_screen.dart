@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/pwc.dart';
 import '../models/racer_profile.dart';
+import '../models/racer_history_item.dart';
 import '../services/auth_service.dart';
 import '../services/image_cache_service.dart';
 import '../services/racer_service.dart';
@@ -24,13 +25,18 @@ class _RacerProfileDetailScreenState extends State<RacerProfileDetailScreen> {
   bool _imagesLoaded = false;
   List<PWC> _racerPWCs = [];
   bool _pwcsLoaded = false;
+  List<RacerHistoryItem> _raceHistory = [];
+  bool _historyLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadImages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadRacerPWCs();
+      if (mounted) {
+        _loadRacerPWCs();
+        _loadRaceHistory();
+      }
     });
   }
 
@@ -52,6 +58,27 @@ class _RacerProfileDetailScreenState extends State<RacerProfileDetailScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _pwcsLoaded = true);
+    }
+  }
+
+  Future<void> _loadRaceHistory() async {
+    final id = widget.racer.id;
+    if (id == null || id.isEmpty) {
+      if (mounted) setState(() => _historyLoaded = true);
+      return;
+    }
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final racerService = RacerService(authService);
+      final history = await racerService.getRacerHistory(id);
+      if (mounted) {
+        setState(() {
+          _raceHistory = history;
+          _historyLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _historyLoaded = true);
     }
   }
 
@@ -259,19 +286,33 @@ class _RacerProfileDetailScreenState extends State<RacerProfileDetailScreen> {
                     ],
                   ),
 
-                  // Results
+                  // Race Results
                   _buildSection(
                     context,
                     title: 'Race Results',
                     icon: Icons.bar_chart,
                     children: [
-                      Text(
-                        'No results available yet.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
+                      if (!_historyLoaded)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      else if (_raceHistory.isEmpty)
+                        Text(
+                          'No results available yet.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
+                      else
+                        ..._raceHistory.map((item) => _buildHistoryItem(context, item)),
                     ],
                   ),
 
@@ -408,6 +449,101 @@ class _RacerProfileDetailScreenState extends State<RacerProfileDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildHistoryItem(BuildContext context, RacerHistoryItem item) {
+    final theme = Theme.of(context);
+    final placement = _placementLabel(item.placement);
+    final isPodium = item.placement >= 1 && item.placement <= 3;
+    final recordLabel = (item.wins > 0 || item.losses > 0)
+        ? '${item.wins}W-${item.losses}L'
+        : null;
+
+    final subtitleParts = <String>[];
+    if (item.eventDate != null) {
+      subtitleParts.add(_formatDate(item.eventDate!));
+    }
+    if (item.className.isNotEmpty) {
+      subtitleParts.add(item.className);
+    } else if (item.classKey.isNotEmpty) {
+      subtitleParts.add(item.classKey);
+    }
+    if (item.pwcNumber != null && item.pwcNumber!.trim().isNotEmpty) {
+      subtitleParts.add('PWC ${item.pwcNumber!.trim()}');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 44,
+            child: Text(
+              placement,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isPodium
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.eventName.isNotEmpty ? item.eventName : 'Event',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (subtitleParts.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitleParts.join(' · '),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (recordLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    recordLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _placementLabel(int placement) {
+    if (placement <= 0) return '—';
+    final mod100 = placement % 100;
+    final mod10 = placement % 10;
+    String suffix;
+    if (mod100 >= 11 && mod100 <= 13) {
+      suffix = 'th';
+    } else if (mod10 == 1) {
+      suffix = 'st';
+    } else if (mod10 == 2) {
+      suffix = 'nd';
+    } else if (mod10 == 3) {
+      suffix = 'rd';
+    } else {
+      suffix = 'th';
+    }
+    return '$placement$suffix';
   }
 
   Widget _buildSection(

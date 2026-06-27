@@ -4,14 +4,21 @@ import 'dart:typed_data';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 
 /// Connects to the event WebSocket and streams decoded JSON payloads.
 /// Call [connect] with the event WS URL; listen to [messages]. Call [disconnect] when done.
 class EventWebSocketService {
   WebSocketChannel? _channel;
   Timer? _keepaliveTimer;
+  Timer? _reconnectTimer;
   static const Duration _keepaliveInterval = Duration(seconds: 25);
+  static const Duration _initialReconnectDelay = Duration(seconds: 1);
+  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+  String? _lastWsUrl;
+  bool _shouldReconnect = false;
+  bool _isDisposed = false;
+  int _reconnectAttempts = 0;
   final StreamController<Map<String, dynamic>> _controller =
       StreamController<Map<String, dynamic>>.broadcast();
 
@@ -27,41 +34,65 @@ class EventWebSocketService {
   }
 
   void connect(String wsUrl) {
-    if (_channel != null) return;
-    print('=== WS Connect === $wsUrl');
+    _lastWsUrl = wsUrl;
+    _shouldReconnect = true;
+    _cancelReconnect();
+    _connectInternal(wsUrl);
+  }
+
+  void _connectInternal(String wsUrl) {
+    if (_isDisposed || _channel != null) return;
+    AppLog.debug('WebSocket', 'Connecting to event stream');
     try {
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _reconnectAttempts = 0;
       _channel!.stream.listen(
         (data) {
           final raw = _rawDataToString(data);
-          print('=== WS raw received === length=${raw.length} preview=${raw.length > 150 ? "${raw.substring(0, 150)}..." : raw}');
           try {
             final map = jsonDecode(raw) as Map<String, dynamic>?;
             if (map != null && !_controller.isClosed) {
-              print('=== WS Received === type=${map['type']} event_id=${map['event_id']} class_key=${map['class_key']}');
+              AppLog.debug('WebSocket', 'Message received: type=${map['type']}');
               _controller.add(map);
             }
           } catch (e, st) {
-            print('=== WS Parse Error === $e');
-            print(st);
+            AppLog.error(
+              'WebSocket',
+              'Failed to parse WebSocket message',
+              error: e,
+              stackTrace: st,
+              recoverable: true,
+            );
           }
         },
         onError: (Object e, StackTrace st) {
-          print('=== WS stream error === $e');
+          AppLog.error(
+            'WebSocket',
+            'WebSocket stream error',
+            error: e,
+            stackTrace: st,
+            recoverable: true,
+          );
           if (!_controller.isClosed) _controller.addError(e, st);
+          _handleUnexpectedDisconnect();
         },
         onDone: () {
-          print('=== WS stream done (connection closed) ===');
-          _stopKeepalive();
-          _channel = null;
+          AppLog.debug('WebSocket', 'Connection closed');
+          _handleUnexpectedDisconnect();
         },
         cancelOnError: false,
       );
       _startKeepalive();
     } catch (e, stack) {
-      logApiError(e, stack, 'WS connect');
-      print('=== WS connect error === $e');
+      AppLog.error(
+        'WebSocket',
+        'WebSocket connect failed',
+        error: e,
+        stackTrace: stack,
+        recoverable: true,
+      );
       if (!_controller.isClosed) _controller.addError(e, stack);
+      _handleUnexpectedDisconnect();
     }
   }
 
@@ -79,9 +110,44 @@ class EventWebSocketService {
     _keepaliveTimer = null;
   }
 
+  void _cancelReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+  }
+
+  Duration _nextReconnectDelay() {
+    final backoffSeconds = 1 << _reconnectAttempts;
+    final delay = Duration(seconds: backoffSeconds);
+    return delay > _maxReconnectDelay ? _maxReconnectDelay : delay;
+  }
+
+  void _handleUnexpectedDisconnect() {
+    _stopKeepalive();
+    _channel = null;
+    if (!_shouldReconnect || _isDisposed) return;
+    final wsUrl = _lastWsUrl;
+    if (wsUrl == null || wsUrl.isEmpty) return;
+    _cancelReconnect();
+    final delay = _reconnectAttempts == 0
+        ? _initialReconnectDelay
+        : _nextReconnectDelay();
+    _reconnectAttempts += 1;
+    AppLog.warning(
+      'WebSocket',
+      'Reconnecting (attempt $_reconnectAttempts, ${delay.inSeconds}s delay)',
+    );
+    _reconnectTimer = Timer(delay, () {
+      if (_isDisposed || !_shouldReconnect) return;
+      _connectInternal(wsUrl);
+    });
+  }
+
   void disconnect() {
+    _shouldReconnect = false;
+    _reconnectAttempts = 0;
+    _cancelReconnect();
     if (_channel != null) {
-      print('=== WS Disconnect ===');
+      AppLog.debug('WebSocket', 'Disconnecting');
       _stopKeepalive();
       _channel?.sink.close();
       _channel = null;
@@ -89,7 +155,8 @@ class EventWebSocketService {
   }
 
   void close() {
+    _isDisposed = true;
     disconnect();
-    _controller.close();
+    if (!_controller.isClosed) _controller.close();
   }
 }

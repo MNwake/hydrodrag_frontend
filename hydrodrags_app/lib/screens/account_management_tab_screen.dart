@@ -19,6 +19,7 @@ import 'bio_edit_screen.dart';
 import 'sponsors_edit_screen.dart';
 import 'my_tickets_screen.dart';
 import 'my_registrations_screen.dart';
+import 'event_waivers_screen.dart';
 
 class AccountManagementTabScreen extends StatefulWidget {
   const AccountManagementTabScreen({super.key});
@@ -902,6 +903,19 @@ class _AccountManagementTabScreenState extends State<AccountManagementTabScreen>
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const MyRegistrationsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.gavel,
+                      title: 'Event Waivers',
+                      subtitle: 'Sign or update waivers for open events',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const EventWaiversScreen(),
                           ),
                         );
                       },

@@ -52,7 +52,7 @@ class RoundBase {
   }
 
   /// True if this round is part of the losers bracket.
-  /// matchup.bracket is "W" for winners, "L" for losers.
+  /// matchup.bracket is "W" for winners, "L" for losers, "C" for championship.
   bool get isLosersBracket =>
       matchups.isNotEmpty && matchups.first.bracket.toUpperCase() == 'L';
 }

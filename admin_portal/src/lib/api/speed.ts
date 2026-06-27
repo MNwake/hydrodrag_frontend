@@ -37,6 +37,7 @@ export interface SpeedRankingItem {
 	place: number;
 	registration_id: string;
 	top_speed: number;
+	pwc_identifier?: string;
 }
 
 export interface SpeedRankingResponse {

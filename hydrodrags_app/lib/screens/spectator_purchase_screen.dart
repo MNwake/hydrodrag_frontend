@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/event.dart';
-import '../models/hydrodrags_config.dart';
-import '../services/spectator_checkout_service.dart';
-import '../services/hydrodrags_config_service.dart';
+import '../payments/mobile_payment_controller.dart';
+import '../payments/mobile_payment_models.dart';
+import '../payments/mobile_payment_service.dart';
+import '../payments/payment_ticket_helpers.dart';
+import '../payments/pending_payment_storage.dart';
 import '../services/error_handler_service.dart';
 import '../widgets/language_toggle.dart';
 import '../utils/phone_formatter.dart';
@@ -30,25 +31,43 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
   int _step = 0; // 0: info, 1: tickets, 2: review & pay
   int _singleDayPasses = 0;
   int _weekendPasses = 0;
-  HydroDragsConfig? _config;
-  bool _configLoading = true;
+  PaymentPricing? _pricing;
+  bool _isLoadingQuote = false;
+  bool _isPaying = false;
 
-  String? _orderId;
-  bool _isCreatingOrder = false;
-  bool _isCapturing = false;
-
-  static const double _fallbackSingleDayPrice = 30.0;
-  static const double _fallbackWeekendPrice = 40.0;
-
-  double get _singleDayPrice =>
-      _config?.spectatorSingleDayPrice ?? _fallbackSingleDayPrice;
-  double get _weekendPrice =>
-      _config?.spectatorWeekendPrice ?? _fallbackWeekendPrice;
+  final _paymentService = MobilePaymentService();
 
   @override
   void initState() {
     super.initState();
-    _loadConfig();
+    _loadQuote();
+    _checkPendingPayment();
+  }
+
+  Future<void> _checkPendingPayment() async {
+    final record = await PendingPaymentStorage.load();
+    if (!mounted || record == null) return;
+    if (record['eventId'] == widget.event.id) {
+      setState(() => _step = 2);
+    }
+  }
+
+  Future<void> _loadQuote() async {
+    setState(() => _isLoadingQuote = true);
+    try {
+      final quote = await _paymentService.quoteSpectator(
+        spectatorSingleDayPasses: _singleDayPasses,
+        spectatorWeekendPasses: _weekendPasses,
+      );
+      if (mounted) {
+        setState(() {
+          _pricing = quote;
+          _isLoadingQuote = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingQuote = false);
+    }
   }
 
   @override
@@ -60,23 +79,6 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
     super.dispose();
   }
 
-  Future<void> _loadConfig() async {
-    final service = HydroDragsConfigService();
-    try {
-      final config = await service.getConfig();
-      if (mounted) {
-        setState(() {
-          _config = config;
-          _configLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _configLoading = false);
-      }
-    }
-  }
-
   void _nextStep() {
     if (_step == 0) {
       if (_formKey.currentState?.validate() ?? false) {
@@ -85,6 +87,7 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
     } else if (_step == 1) {
       if (_singleDayPasses > 0 || _weekendPasses > 0) {
         setState(() => _step = 2);
+        _loadQuote();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -117,86 +120,42 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
       return;
     }
 
-    setState(() => _isCreatingOrder = true);
+    setState(() => _isPaying = true);
     try {
-      final service = SpectatorCheckoutService();
-      final result = await service.createSpectatorCheckout(
-        eventId: widget.event.id,
+      final controller = MobilePaymentController(_paymentService);
+      final result = await controller.runSpectatorPayment(
         purchaserName: name,
-        purchaserEmail: email,
         purchaserPhone: _phoneController.text.trim(),
-        purchaserZip: zip,
+        purchaserEmail: email,
         spectatorSingleDayPasses: _singleDayPasses,
         spectatorWeekendPasses: _weekendPasses,
+        eventId: widget.event.id,
+        purchaserZip: zip,
       );
       if (!mounted) return;
-      setState(() => _isCreatingOrder = false);
+      setState(() => _isPaying = false);
 
-      if (result == null || result.approvalUrl.isEmpty) {
-        ErrorHandlerService.showError(context, 'Could not start PayPal checkout.');
+      if (result != null) {
+        final tickets = ticketsFromPaymentResult(result, widget.event.id);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => SpectatorTicketCompleteScreen(
+              event: widget.event,
+              tickets: tickets,
+            ),
+          ),
+        );
         return;
       }
-      _orderId = result.orderId;
-      final uri = Uri.parse(result.approvalUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!mounted) return;
-        ErrorHandlerService.showError(context, 'Could not open PayPal.');
+
+      final message = controller.lastError ?? 'Payment could not be completed';
+      if (controller.state != MobilePaymentFlowState.canceled) {
+        ErrorHandlerService.showError(context, message);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isCreatingOrder = false);
-        ErrorHandlerService.logError(e, context: 'Spectator Create Checkout');
-        ErrorHandlerService.showError(context, e);
-      }
-    }
-  }
-
-  Future<void> _confirmPaymentComplete() async {
-    if (_orderId == null || _orderId!.isEmpty) {
-      ErrorHandlerService.showError(context, 'No pending order. Start checkout first.');
-      return;
-    }
-    setState(() => _isCapturing = true);
-    try {
-      final service = SpectatorCheckoutService();
-      final response = await service.captureSpectatorCheckout(
-        eventId: widget.event.id,
-        orderId: _orderId!,
-      );
-      if (!mounted) return;
-      setState(() => _isCapturing = false);
-
-      if (response.success && response.tickets.isNotEmpty) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => SpectatorTicketCompleteScreen(
-              event: widget.event,
-              tickets: response.tickets,
-            ),
-          ),
-        );
-      } else if (response.success) {
-        // Backend didn't return tickets; still show success and suggest lookup by phone
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => SpectatorTicketCompleteScreen(
-              event: widget.event,
-              tickets: const [],
-            ),
-          ),
-        );
-      } else {
-        ErrorHandlerService.showError(
-          context,
-          'Payment could not be confirmed. Try again or contact support.',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isCapturing = false);
-        ErrorHandlerService.logError(e, context: 'Spectator Capture Checkout');
+        setState(() => _isPaying = false);
+        ErrorHandlerService.logError(e, context: 'Spectator payment');
         ErrorHandlerService.showError(context, e);
       }
     }
@@ -344,12 +303,15 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
   }
 
   Widget _buildStepTickets(AppLocalizations l10n, ThemeData theme) {
-    if (_configLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final dayPrice = _pricing?.spectatorSingleDayPrice;
+    final weekendPrice = _pricing?.spectatorWeekendPrice;
+    final dayLabel = dayPrice != null
+        ? '${l10n.spectatorSingleDayPass} (\$${dayPrice.toStringAsFixed(0)})'
+        : l10n.spectatorSingleDayPass;
+    final weekendLabel = weekendPrice != null
+        ? '${l10n.spectatorWeekendPass} (\$${weekendPrice.toStringAsFixed(0)})'
+        : l10n.spectatorWeekendPass;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,14 +333,14 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
         Row(
           children: [
             Expanded(
-              child: Text(
-                l10n.spectatorSingleDayPass,
-                style: theme.textTheme.bodyLarge,
-              ),
+              child: Text(dayLabel, style: theme.textTheme.bodyLarge),
             ),
             IconButton.filled(
               onPressed: _singleDayPasses > 0
-                  ? () => setState(() => _singleDayPasses--)
+                  ? () {
+                      setState(() => _singleDayPasses--);
+                      _loadQuote();
+                    }
                   : null,
               icon: const Icon(Icons.remove),
             ),
@@ -387,7 +349,10 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
               child: Text('$_singleDayPasses', style: theme.textTheme.titleMedium),
             ),
             IconButton.filled(
-              onPressed: () => setState(() => _singleDayPasses++),
+              onPressed: () {
+                setState(() => _singleDayPasses++);
+                _loadQuote();
+              },
               icon: const Icon(Icons.add),
             ),
           ],
@@ -396,14 +361,14 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
         Row(
           children: [
             Expanded(
-              child: Text(
-                l10n.spectatorWeekendPass,
-                style: theme.textTheme.bodyLarge,
-              ),
+              child: Text(weekendLabel, style: theme.textTheme.bodyLarge),
             ),
             IconButton.filled(
               onPressed: _weekendPasses > 0
-                  ? () => setState(() => _weekendPasses--)
+                  ? () {
+                      setState(() => _weekendPasses--);
+                      _loadQuote();
+                    }
                   : null,
               icon: const Icon(Icons.remove),
             ),
@@ -412,7 +377,10 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
               child: Text('$_weekendPasses', style: theme.textTheme.titleMedium),
             ),
             IconButton.filled(
-              onPressed: () => setState(() => _weekendPasses++),
+              onPressed: () {
+                setState(() => _weekendPasses++);
+                _loadQuote();
+              },
               icon: const Icon(Icons.add),
             ),
           ],
@@ -422,7 +390,13 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
   }
 
   Widget _buildStepReviewAndPay(AppLocalizations l10n, ThemeData theme) {
-    final total = _singleDayPasses * _singleDayPrice + _weekendPasses * _weekendPrice;
+    if (_isLoadingQuote && _pricing == null) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -434,31 +408,29 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (_singleDayPasses > 0)
-          _summaryRow(
-            theme,
-            '${l10n.spectatorSingleDayPass} × $_singleDayPasses',
-            '\$${(_singleDayPasses * _singleDayPrice).toStringAsFixed(2)}',
-          ),
-        if (_weekendPasses > 0)
-          _summaryRow(
-            theme,
-            '${l10n.spectatorWeekendPass} × $_weekendPasses',
-            '\$${(_weekendPasses * _weekendPrice).toStringAsFixed(2)}',
+        if (_pricing != null)
+          ..._pricing!.lineItems.map(
+            (item) => _summaryRow(
+              theme,
+              item.quantity != null && item.quantity! > 1
+                  ? '${item.label} × ${item.quantity}'
+                  : item.label,
+              '\$${item.amount.toStringAsFixed(2)}',
+            ),
           ),
         const SizedBox(height: 8),
         _summaryRow(
           theme,
           l10n.total,
-          '\$${total.toStringAsFixed(2)}',
+          '\$${(_pricing?.totalAmount ?? 0).toStringAsFixed(2)}',
           bold: true,
         ),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: _isCreatingOrder ? null : _payWithPayPal,
-            icon: _isCreatingOrder
+            onPressed: (_isPaying || _pricing == null) ? null : _payWithPayPal,
+            icon: _isPaying
                 ? const SizedBox(
                     width: 20,
                     height: 20,
@@ -469,46 +441,6 @@ class _SpectatorPurchaseScreenState extends State<SpectatorPurchaseScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(l10n.payWithPayPal),
             ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.colorScheme.outline.withOpacity(0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.afterPayPalReturn,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: (_orderId == null || _orderId!.isEmpty || _isCapturing)
-                      ? null
-                      : _confirmPaymentComplete,
-                  icon: _isCapturing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_circle_outline, size: 20),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Text(l10n.iveCompletedPayment),
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ],

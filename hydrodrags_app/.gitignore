@@ -27,6 +27,7 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
@@ -39,17 +40,19 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio / Gradle build artifacts
+/android/.kotlin/
+/android/.gradle/
+/android/app/build/
+/android/local.properties
 /android/app/debug
 /android/app/profile
 /android/app/release
 
+# iOS build output
+/ios/build/
 
-hydrodrags_app/ios/build/
-hydrodrags_app/build/
-
-# Android signing secrets (paths relative to repo root)
-android/key.properties
-android/hydrodrags-release-key.jks
-hydrodrags_app/android/key.properties
-hydrodrags_app/android/hydrodrags-release-key.jks
+# Android signing secrets
+/android/key.properties
+/android/**/*.jks
+/android/**/*.keystore

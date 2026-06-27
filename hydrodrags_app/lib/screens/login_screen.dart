@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/language_toggle.dart';
 import '../services/auth_service.dart';
-import '../services/error_handler_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -72,10 +71,29 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _resendCode() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.resendCodeDialogTitle),
+        content: Text(l10n.resendCodeDialogMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.sendCode),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     final authService = Provider.of<AuthService>(context, listen: false);
     final email = authService.email;
     if (email == null || email.isEmpty) {
-      // No stored email (e.g. user navigated back and forth); go back to email step
       _reset();
       return;
     }

@@ -5,12 +5,15 @@ class SpeedRankingItem {
   final double topSpeed;
   /// Racer display name when provided by the backend (e.g. from registration).
   final String? racerName;
+  /// PWC number from event registration (speed alley display).
+  final String pwcIdentifier;
 
   SpeedRankingItem({
     required this.place,
     required this.registrationId,
     required this.topSpeed,
     this.racerName,
+    this.pwcIdentifier = '',
   });
 
   factory SpeedRankingItem.fromJson(Map<String, dynamic> json) {
@@ -18,8 +21,13 @@ class SpeedRankingItem {
     String registrationId = json['registration_id'] as String? ?? '';
 
     final registration = json['registration'];
+    var pwcIdentifier = json['pwc_identifier'] as String? ?? '';
+
     if (registration is Map<String, dynamic>) {
       registrationId = registration['id'] as String? ?? registrationId;
+      if (pwcIdentifier.isEmpty) {
+        pwcIdentifier = registration['pwc_identifier'] as String? ?? '';
+      }
       final racer = registration['racer'];
       if (racer is Map<String, dynamic>) {
         racerName = racer['full_name'] as String? ??
@@ -43,6 +51,7 @@ class SpeedRankingItem {
       registrationId: registrationId,
       topSpeed: (json['top_speed'] as num?)?.toDouble() ?? 0,
       racerName: racerName?.trim().isEmpty == true ? null : racerName,
+      pwcIdentifier: pwcIdentifier.trim(),
     );
   }
 
@@ -140,27 +149,55 @@ class SpeedSession {
     final sessionMap = payload['session'];
     final session = sessionMap is Map<String, dynamic> ? sessionMap : null;
     final rankingsList = payload['rankings'] as List<dynamic>? ?? [];
+    final hasRankingsKey = payload.containsKey('rankings');
+    final reset = payload['reset'] == true;
 
     final id = existing?.id ?? '';
-    final durationSeconds = existing?.durationSeconds ?? 0;
+    var durationSeconds = existing?.durationSeconds ?? 0;
     final totalPausedSeconds = existing?.totalPausedSeconds ?? 0;
+
+    if (payload.containsKey('duration_seconds')) {
+      durationSeconds = (payload['duration_seconds'] as num?)?.toInt() ?? durationSeconds;
+    } else if (session != null && session.containsKey('duration_seconds')) {
+      durationSeconds =
+          (session['duration_seconds'] as num?)?.toInt() ?? durationSeconds;
+    }
 
     DateTime? startedAt;
     DateTime? stoppedAt;
     DateTime? pausedAt;
     int? remainingSeconds;
     if (session != null) {
-      startedAt = session['started_at'] != null
-          ? DateTime.tryParse(session['started_at'] as String)
-          : existing?.startedAt;
-      stoppedAt = session['stopped_at'] != null
-          ? DateTime.tryParse(session['stopped_at'] as String)
-          : existing?.stoppedAt;
-      pausedAt = session['paused_at'] != null
-          ? DateTime.tryParse(session['paused_at'] as String)
-          : existing?.pausedAt;
-      remainingSeconds = (session['remaining_seconds'] as num?)?.toInt() ??
-          existing?.remainingSeconds;
+      // Respect explicit nulls from websocket payloads (e.g. resume sets paused_at=null).
+      if (session.containsKey('started_at')) {
+        startedAt = session['started_at'] != null
+            ? DateTime.tryParse(session['started_at'] as String)
+            : null;
+      } else {
+        startedAt = existing?.startedAt;
+      }
+      if (session.containsKey('stopped_at')) {
+        stoppedAt = session['stopped_at'] != null
+            ? DateTime.tryParse(session['stopped_at'] as String)
+            : null;
+      } else {
+        stoppedAt = existing?.stoppedAt;
+      }
+      if (session.containsKey('paused_at')) {
+        pausedAt = session['paused_at'] != null
+            ? DateTime.tryParse(session['paused_at'] as String)
+            : null;
+      } else {
+        pausedAt = existing?.pausedAt;
+      }
+      remainingSeconds = session.containsKey('remaining_seconds')
+          ? (session['remaining_seconds'] as num?)?.toInt()
+          : existing?.remainingSeconds;
+    } else if (reset) {
+      startedAt = null;
+      stoppedAt = null;
+      pausedAt = null;
+      remainingSeconds = durationSeconds;
     } else {
       startedAt = existing?.startedAt;
       stoppedAt = existing?.stoppedAt;
@@ -180,15 +217,22 @@ class SpeedSession {
       stoppedAt: stoppedAt,
       pausedAt: pausedAt,
       durationSeconds: durationSeconds,
-      totalPausedSeconds: totalPausedSeconds,
+      totalPausedSeconds: reset ? 0 : totalPausedSeconds,
       remainingSeconds: remainingSeconds,
-      rankings: rankings.isNotEmpty ? rankings : (existing?.rankings ?? []),
+      rankings: hasRankingsKey || reset ? rankings : (existing?.rankings ?? []),
     );
   }
 
   /// Session is active (started and not stopped).
   bool get isActive =>
       startedAt != null &&
+      pausedAt == null &&
+      stoppedAt == null;
+
+  /// Session is currently paused.
+  bool get isPaused =>
+      startedAt != null &&
+      pausedAt != null &&
       stoppedAt == null;
 
   /// Session has ended.

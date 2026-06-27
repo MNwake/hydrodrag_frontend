@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/my_registration.dart';
 import '../services/auth_service.dart';
 import '../services/racer_service.dart';
+import '../l10n/app_localizations.dart';
 
 class MyRegistrationsScreen extends StatefulWidget {
   const MyRegistrationsScreen({super.key});
@@ -269,8 +270,9 @@ class _MyRegistrationsScreenState extends State<MyRegistrationsScreen> {
   }
 
   Widget _buildRegistrationTile(ThemeData theme, MyRegistration r) {
+    final l10n = AppLocalizations.of(context)!;
     final subtitleParts = <String>[
-      if (r.pwcIdentifier.isNotEmpty) 'PWC: ${r.pwcIdentifier}',
+      if (r.pwcIdentifier.isNotEmpty) l10n.pwcRacerNumberDisplay(r.pwcIdentifier),
       if (r.losses > 0) 'Losses: ${r.losses}',
     ];
     if (r.payment != null) {

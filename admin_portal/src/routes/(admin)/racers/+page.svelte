@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import Modal from '$lib/components/Modal.svelte';
 	import { toast } from '$lib/stores/toast';
+	import { formatDateLocal, formatDateTimeLocal } from '$lib/format/datetime';
 	import { createRacer, fetchRacers, type RacerCreatePayload, type RacerRow } from '$lib/api/resources';
+	import { isStaffPortal } from '$lib/admin-auth';
 
 	type SortKey = 'name' | 'phone' | 'membership_number' | 'waiver_signed_at' | 'is_of_age' | 'has_ihra_membership';
 	type SortDir = 'asc' | 'desc';
@@ -26,6 +28,8 @@
 
 	let showCreateModal = false;
 	let creatingRacer = false;
+
+	const staffPortal = isStaffPortal();
 
 	let createForm = {
 		email: '',
@@ -74,7 +78,7 @@
 	}
 
 	async function handleCreateRacer() {
-		if (creatingRacer) return;
+		if (creatingRacer || staffPortal) return;
 
 		const email = createForm.email.trim();
 		const firstName = createForm.first_name.trim();
@@ -130,9 +134,7 @@
 	}
 
 	function formatWaiverSignedAt(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+		return formatDateTimeLocal(iso);
 	}
 
 	function matchesSearch(r: RacerRow, q: string): boolean {
@@ -220,16 +222,18 @@
 	<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
 		<div>
 			<h1 class="page-title">Racers</h1>
-			<p class="page-subtitle">All registered racers</p>
+			<p class="page-subtitle">{staffPortal ? 'View registered racers (read-only).' : 'All registered racers'}</p>
 		</div>
-		<button
-			type="button"
-			class="btn btn-primary"
-			on:click={() => (showCreateModal = true)}
-			disabled={creatingRacer || loading}
-		>
-			{creatingRacer ? 'Creating…' : '+ Create racer'}
-		</button>
+		{#if !staffPortal}
+			<button
+				type="button"
+				class="btn btn-primary"
+				on:click={() => (showCreateModal = true)}
+				disabled={creatingRacer || loading}
+			>
+				{creatingRacer ? 'Creating…' : '+ Create racer'}
+			</button>
+		{/if}
 	</div>
 </div>
 
@@ -309,6 +313,7 @@
 	</div>
 {/if}
 
+{#if !staffPortal}
 <Modal bind:open={showCreateModal} title="Create racer">
 	<form id="create-racer-form" on:submit|preventDefault={handleCreateRacer}>
 		<div class="form-card" style="margin-bottom: 0;">
@@ -451,6 +456,7 @@
 		</div>
 	</form>
 </Modal>
+{/if}
 
 <style>
 	.label-required {

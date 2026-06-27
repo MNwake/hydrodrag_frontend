@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
 import '../models/event.dart';
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 import '../models/event_registration_list_item.dart';
+import '../models/event_result.dart';
 import '../models/round.dart';
 import '../models/speed_ranking.dart';
 import 'auth_service.dart';
@@ -33,22 +34,15 @@ class EventService {
   /// Get all events
   /// GET /events
   Future<List<Event>> getEvents() async {
+    return getUpcomingEvents();
+  }
+
+  /// Get upcoming posted events.
+  Future<List<Event>> getUpcomingEvents() async {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}/events');
 
-      if (kDebugMode) {
-        print('=== API Request: Get Events ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Events ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
+      final response = await LoggedHttp.get(uri);
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -56,24 +50,50 @@ class EventService {
         final events = eventsJson
             .map((json) => Event.fromJson(json as Map<String, dynamic>))
             .toList();
-
-        if (kDebugMode) {
-          print('Loaded ${events.length} events');
-        }
+        final total = responseBody is Map ? responseBody['total'] as int? : null;
+        final statuses = events.map((e) => e.eventStatus.name).join(', ');
+        AppLog.debug(
+          'EventService',
+          'GET /events returned ${events.length} upcoming'
+          '${total != null ? ' (backend total=$total)' : ''}'
+          '${statuses.isNotEmpty ? ' [statuses: $statuses]' : ''}',
+          terminal: true,
+        );
         return events;
       } else {
-        if (kDebugMode) {
-          print('Failed to get events: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         throw Exception('Failed to load events: ${response.statusCode}');
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get events');
-      if (kDebugMode) {
-        print('Error getting events: $e');
-      }
+      AppLog.error('EventService', 'Failed to fetch events', error: e, stackTrace: stack, recoverable: true);
       rethrow;
+    }
+  }
+
+  /// Get completed events for historical browsing.
+  Future<List<Event>> getPastEvents() async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}/events/past');
+      final response = await LoggedHttp.get(uri);
+      if (response.statusCode != 200) {
+        return [];
+      }
+      final responseBody = jsonDecode(response.body);
+      final List<dynamic> eventsJson = responseBody['events'] ?? responseBody;
+      final events = eventsJson
+          .map((json) => Event.fromJson(json as Map<String, dynamic>))
+          .toList();
+      final total = responseBody is Map ? responseBody['total'] as int? : null;
+      final statuses = events.map((e) => e.eventStatus.name).join(', ');
+      AppLog.debug(
+        'EventService',
+        'GET /events/past returned ${events.length} past'
+        '${total != null ? ' (backend total=$total)' : ''}'
+        '${statuses.isNotEmpty ? ' [statuses: $statuses]' : ''}',
+        terminal: true,
+      );
+      return events;
+    } catch (_) {
+      return [];
     }
   }
 
@@ -83,41 +103,18 @@ class EventService {
     try {
       final uri = Uri.parse('${ApiConfig.baseUrl}/events/$eventId');
 
-      if (kDebugMode) {
-        print('=== API Request: Get Event ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Event ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
+      final response = await LoggedHttp.get(uri);
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
         final eventJson = responseBody['event'] ?? responseBody;
         final event = Event.fromJson(eventJson as Map<String, dynamic>);
-
-        if (kDebugMode) {
-          print('Loaded event: ${event.name}');
-        }
         return event;
       } else {
-        if (kDebugMode) {
-          print('Failed to get event: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get event');
-      if (kDebugMode) {
-        print('Error getting event: $e');
-      }
+      AppLog.error('EventService', 'Failed to fetch event', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }
@@ -131,19 +128,7 @@ class EventService {
       headers['Content-Type'] = 'application/json';
       headers['accept'] = 'application/json';
 
-      if (kDebugMode) {
-        print('=== API Request: Get Event Registrations ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Event Registrations ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
+      final response = await LoggedHttp.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -153,22 +138,34 @@ class EventService {
             .map((json) =>
                 EventRegistrationListItem.fromJson(json as Map<String, dynamic>))
             .toList();
-        if (kDebugMode) {
-          print('Loaded ${registrations.length} event registrations');
-        }
         return registrations;
       } else {
-        if (kDebugMode) {
-          print('Failed to get event registrations: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return [];
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get event registrations');
-      if (kDebugMode) {
-        print('Error getting event registrations: $e');
+      AppLog.error('EventService', 'Failed to fetch event registrations', error: e, stackTrace: stack, recoverable: true);
+      rethrow;
+    }
+  }
+
+  /// Get finalized results for a completed event.
+  /// GET /events/{event_id}/results
+  Future<EventResultsResponse> getEventResults(String eventId) async {
+    try {
+      final uri = Uri.parse(ApiConfig.eventResults(eventId));
+
+      final response = await LoggedHttp.get(uri);
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return EventResultsResponse.fromJson(json);
       }
+      if (response.statusCode == 404) {
+        return EventResultsResponse(eventId: eventId, results: []);
+      }
+      throw Exception('Failed to load event results: ${response.statusCode}');
+    } catch (e, stack) {
+      AppLog.error('EventService', 'Failed to fetch event results', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -183,19 +180,7 @@ class EventService {
       headers['Content-Type'] = 'application/json';
       headers['accept'] = 'application/json';
 
-      if (kDebugMode) {
-        print('=== API Request: Get Event Rounds ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri, headers: headers);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Event Rounds ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
+      final response = await LoggedHttp.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
@@ -204,22 +189,12 @@ class EventService {
         final rounds = list
             .map((json) => RoundBase.fromJson(json as Map<String, dynamic>))
             .toList();
-        if (kDebugMode) {
-          print('Loaded ${rounds.length} rounds');
-        }
         return rounds;
       } else {
-        if (kDebugMode) {
-          print('Failed to get rounds: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return [];
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get rounds');
-      if (kDebugMode) {
-        print('Error getting rounds: $e');
-      }
+      AppLog.error('EventService', 'Failed to fetch rounds', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -231,19 +206,7 @@ class EventService {
     try {
       final uri = Uri.parse(ApiConfig.speedSession(eventId, classKey));
 
-      if (kDebugMode) {
-        print('=== API Request: Get Speed Session ===');
-        print('URL: $uri');
-        print('Method: GET');
-      }
-
-      final response = await http.get(uri);
-
-      if (kDebugMode) {
-        print('=== API Response: Get Speed Session ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
+      final response = await LoggedHttp.get(uri);
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -252,15 +215,9 @@ class EventService {
       if (response.statusCode == 404) {
         return null;
       }
-      if (kDebugMode) {
-        print('Failed to get speed session: ${response.statusCode}');
-      }
       return null;
     } catch (e, stack) {
-      logApiError(e, stack, 'Get speed session');
-      if (kDebugMode) {
-        print('Error getting speed session: $e');
-      }
+      AppLog.error('EventService', 'Failed to fetch speed session', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }

@@ -1,10 +1,10 @@
 import { redirect } from '@sveltejs/kit';
-import { isAdminLoggedIn } from '$lib/admin-auth';
+import { isPortalLoggedIn } from '$lib/admin-auth';
 
 export const ssr = false;
 
 export function load() {
-	if (isAdminLoggedIn()) {
+	if (isPortalLoggedIn()) {
 		throw redirect(302, '/dashboard');
 	}
 	return {};

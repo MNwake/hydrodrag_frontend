@@ -24,12 +24,23 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.koesterventures.hydrodrags.paypal</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.koesterventures.hydrodrags</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Add events to your calendar so you don't miss races.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>We need access to your camera to take a profile photo.</string>
+	<string>We need access to your camera to capture your government ID and selfie for event waiver verification.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Used when adding events to your calendar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

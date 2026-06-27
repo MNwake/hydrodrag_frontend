@@ -1,21 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { getAdminUsername, clearAdminLoggedIn } from '$lib/admin-auth';
+	import { getPortalUsername, clearPortalSession, isStaffPortal } from '$lib/admin-auth';
 
-	const nav = [
+	const navAdmin = [
 		{ href: '/dashboard', label: 'Dashboard' },
 		{ href: '/company', label: 'Company' },
 		{ href: '/events', label: 'Events' },
 		{ href: '/racers', label: 'Racers' },
 		{ href: '/registrations', label: 'Registrations' },
-		{ href: '/spectators', label: 'Spectators' },
+		{ href: '/spectators', label: 'Attendees / passes' },
+		{ href: '/shirts', label: 'Shirt sales' },
 		{ href: '/payments', label: 'Payments' }
 	];
+
+	const navStaff = [
+		{ href: '/events', label: 'Events' },
+		{ href: '/racers', label: 'Racers' }
+	];
+
+	$: nav = isStaffPortal() ? navStaff : navAdmin;
 
 	let sidebarOpen = false;
 
 	function logout() {
-		clearAdminLoggedIn();
+		clearPortalSession();
 		window.location.href = '/login';
 	}
 
@@ -49,7 +57,7 @@
 		on:click={closeSidebar}
 	></button>
 	<aside class="sidebar" class:open={sidebarOpen}>
-		<div class="sidebar-brand">HydroDrags Admin</div>
+		<div class="sidebar-brand">HydroDrags {isStaffPortal() ? 'Staff' : 'Admin'}</div>
 		<nav class="sidebar-nav">
 			{#each nav as item}
 				<a
@@ -67,7 +75,7 @@
 		<header class="topbar">
 			<div class="topbar-spacer"></div>
 			<div class="topbar-actions">
-				<span class="topbar-email">{getAdminUsername()}</span>
+				<span class="topbar-email">{getPortalUsername()}</span>
 				<button type="button" class="btn btn-secondary btn-sm" on:click={logout}>
 					Logout
 				</button>

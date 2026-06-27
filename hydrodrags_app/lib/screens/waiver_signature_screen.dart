@@ -1,14 +1,19 @@
-import 'dart:convert';
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:signature/signature.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:signature/signature.dart';
+
+import '../payments/pending_waiver_storage.dart';
 import '../services/app_state_service.dart';
 import '../services/auth_service.dart';
-import '../services/racer_service.dart';
 import '../services/error_handler_service.dart';
-import '../utils/waiver_pdf.dart';
+import '../services/waiver_service.dart';
 import '../widgets/language_toggle.dart';
-import '../models/waiver.dart';
+import '../waiver_capture/widgets/waiver_flow_progress.dart';
+import '../waiver_capture/services/waiver_flow_router.dart';
 
 class WaiverSignatureScreen extends StatefulWidget {
   const WaiverSignatureScreen({super.key});
@@ -25,8 +30,9 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
   );
   final _nameController = TextEditingController();
   bool _agreeToTerms = false;
+  bool _confirmIdentity = false;
   final _formKey = GlobalKey<FormState>();
-  DateTime _signedDate = DateTime.now();
+  String? _sessionId;
 
   @override
   void initState() {
@@ -36,19 +42,12 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
     if (profile != null) {
       _nameController.text = profile.fullName;
     }
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _signedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      helpText: 'Date of signature',
-    );
-    if (picked != null && mounted) {
-      setState(() => _signedDate = picked);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _sessionId = ModalRoute.of(context)?.settings.arguments as String?;
+      if (await WaiverFlowRouter.redirectIfSignedForRegistration(context)) {
+        return;
+      }
+    });
   }
 
   @override
@@ -58,11 +57,47 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
     super.dispose();
   }
 
+  Future<Map<String, dynamic>> _collectEvidence() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final deviceInfo = DeviceInfoPlugin();
+    String platform = 'unknown';
+    String os = 'unknown';
+    String? deviceModel;
+
+    if (Platform.isAndroid) {
+      final android = await deviceInfo.androidInfo;
+      platform = 'android';
+      os = 'Android ${android.version.release}';
+      deviceModel = android.model;
+    } else if (Platform.isIOS) {
+      final ios = await deviceInfo.iosInfo;
+      platform = 'ios';
+      os = 'iOS ${ios.systemVersion}';
+      deviceModel = ios.utsname.machine;
+    }
+
+    final now = DateTime.now();
+    return {
+      'device_timestamp': now.toUtc().toIso8601String(),
+      'timezone_name': now.timeZoneName,
+      'timezone_offset_minutes': now.timeZoneOffset.inMinutes,
+      'platform': platform,
+      'operating_system': os,
+      'app_version': packageInfo.version,
+      'build_number': packageInfo.buildNumber,
+      'device_model': deviceModel,
+      'locale': Localizations.localeOf(context).toLanguageTag(),
+      'gps_available': false,
+    };
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_agreeToTerms) {
+    if (!_agreeToTerms || !_confirmIdentity) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must agree to the terms')),
+        const SnackBar(
+          content: Text('You must confirm your identity and agree to the waiver'),
+        ),
       );
       return;
     }
@@ -72,64 +107,47 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
       );
       return;
     }
+    if (_sessionId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Waiver session missing')),
+      );
+      return;
+    }
 
     final signatureBytes = await _signatureController.toPngBytes();
     if (signatureBytes == null || !mounted) return;
 
-    final appState = Provider.of<AppStateService>(context, listen: false);
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final racerService = RacerService(authService);
-
-    final htmlContent = appState.waiverContentHtml ?? '';
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-    }
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
     try {
-      final pdfBytes = await buildWaiverPdf(
-        htmlContent: htmlContent,
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final service = WaiverService(auth);
+      final evidence = await _collectEvidence();
+      await service.signWaiver(
+        sessionId: _sessionId!,
+        typedLegalName: _nameController.text.trim(),
+        confirmedIdentity: _confirmIdentity,
+        confirmedRead: _agreeToTerms,
+        evidence: evidence,
         signaturePngBytes: signatureBytes,
-        signedDate: _signedDate,
-        fullLegalName: _nameController.text.trim(),
       );
-
-      final uploaded = await racerService.uploadWaiver(
-        pdfBytes,
-        filename: 'waiver.pdf',
-      );
-
+      final manualResign = await PendingWaiverStorage.isManualResignFlow();
+      await PendingWaiverStorage.clear();
       if (!mounted) return;
-      Navigator.of(context).pop(); // dismiss loading
-
-      if (uploaded) {
-        final signatureData = base64Encode(signatureBytes);
-        final event = appState.selectedEvent;
-        final waiverId = event?.id ?? 'default-waiver';
-
-        final signature = WaiverSignature(
-          waiverId: waiverId,
-          fullLegalName: _nameController.text,
-          signatureData: signatureData,
-          signedAt: _signedDate,
-        );
-
-        appState.setWaiverSignature(signature);
-        Navigator.of(context).pushReplacementNamed('/checkout');
-      } else {
-        ErrorHandlerService.showError(
-          context,
-          'Failed to save waiver. Please try again.',
-        );
+      Navigator.of(context).pop();
+      if (manualResign) {
+        Navigator.of(context).pushReplacementNamed('/event-waivers');
+        return;
       }
+      await WaiverFlowRouter.navigateToCheckout(context);
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // dismiss loading
-        ErrorHandlerService.logError(e, context: 'Upload Waiver');
+        Navigator.of(context).pop();
+        ErrorHandlerService.logError(e, context: 'Sign Waiver');
         ErrorHandlerService.showError(context, e);
       }
     }
@@ -148,122 +166,93 @@ class _WaiverSignatureScreenState extends State<WaiverSignatureScreen> {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  appState.waiverTitle ?? 'Waiver — Signature',
-                  style: theme.textTheme.headlineMedium,
-                ),
+      body: Column(
+        children: [
+          const WaiverFlowProgressHeader(
+            currentStep: WaiverFlowStep.signature,
+            idFrontComplete: true,
+            idBackSkipped: true,
+            selfieComplete: true,
+            waiverReadComplete: true,
+          ),
+          Expanded(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        appState.waiverTitle ?? 'Waiver — Signature',
+                        style: theme.textTheme.headlineMedium,
+                      ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter the date and your full legal name, then sign below.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  'Type your full legal name as shown on your government ID.',
+                  style: theme.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 24),
-                // Date
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                    child: Text(
-                      '${_signedDate.year}-${_signedDate.month.toString().padLeft(2, '0')}-${_signedDate.day.toString().padLeft(2, '0')}',
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Full Legal Name',
-                    helperText: 'Enter your full legal name as it appears on your ID',
+                    labelText: 'Full legal name',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? 'Required' : null,
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  "Competitor/Participant's Legal Signature:",
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  color: Colors.white,
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: theme.colorScheme.outline),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.draw, color: theme.colorScheme.primary, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Sign in the box below',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => _signatureController.clear(),
-                              child: const Text('Clear'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: theme.colorScheme.outline),
-                        ),
-                        child: Signature(
-                          controller: _signatureController,
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 CheckboxListTile(
-                  value: _agreeToTerms,
-                  onChanged: (value) => setState(() => _agreeToTerms = value ?? false),
+                  value: _confirmIdentity,
+                  onChanged: (v) => setState(() => _confirmIdentity = v ?? false),
                   title: const Text(
-                    'I certify that I have read and agree to the terms and conditions of this waiver.',
+                    'I am the individual shown on my government-issued ID',
                   ),
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
-                const SizedBox(height: 32),
+                CheckboxListTile(
+                  value: _agreeToTerms,
+                  onChanged: (v) => setState(() => _agreeToTerms = v ?? false),
+                  title: const Text(
+                    'I have read and agree to the waiver terms',
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 16),
+                Text('Draw your signature', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Signature(
+                    controller: _signatureController,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _signatureController.clear(),
+                  child: const Text('Clear signature'),
+                ),
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: _submit,
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text('Submit'),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text('Submit waiver'),
                   ),
                 ),
-              ],
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

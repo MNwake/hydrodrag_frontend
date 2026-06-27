@@ -1,16 +1,11 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
-import '../utils/api_error_logger.dart';
-
-/// Android options that are more reliable on emulators (avoids some KeyStore crashes).
-const AndroidOptions _androidOptions = AndroidOptions(
-  resetOnError: true,
-  sharedPreferencesName: 'flutter_secure_storage_hydrodrags',
-);
+import '../utils/app_log.dart';
+import '../utils/secure_storage_config.dart';
 
 /// Authentication state
 enum AuthStatus {
@@ -47,9 +42,7 @@ class VerifyCodeResponse {
 
 /// AuthService manages passwordless email authentication
 class AuthService extends ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: _androidOptions,
-  );
+  final FlutterSecureStorage _secureStorage = appSecureStorage;
   
   // Storage keys
   static const String _tokenKey = 'auth_token';
@@ -75,49 +68,26 @@ class AuthService extends ChangeNotifier {
   bool get isServerUnavailable => _status == AuthStatus.serverUnavailable;
 
   AuthService() {
-    // On Android emulators, KeyStore can crash if touched too early. Defer first access.
-    if (Platform.isAndroid) {
-      Future<void>.delayed(const Duration(milliseconds: 300), _checkExistingAuth);
-    } else {
-      _checkExistingAuth();
-    }
+    _checkExistingAuth();
   }
 
   /// Check if server is available
   Future<bool> _checkServerHealth() async {
     try {
-      if (kDebugMode) {
-        print('=== API Request: Health Check ===');
-        print('URL: ${ApiConfig.healthEndpoint}');
-        print('Method: GET');
-        print('Headers: {Content-Type: application/json}');
-      }
 
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         Uri.parse(ApiConfig.healthEndpoint),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 5));
-      
-      if (kDebugMode) {
-        print('=== API Response: Health Check ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         final isHealthy = body['status'] == 'ok';
-        if (kDebugMode) {
-          print('Server health: ${isHealthy ? "OK" : "NOT OK"}');
-        }
         return isHealthy;
       }
       return false;
     } catch (e, stack) {
-      logApiError(e, stack, 'Health Check');
-      if (kDebugMode) {
-        print('Server health check failed: $e');
-      }
+      AppLog.error('Auth', 'Health check failed', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -144,17 +114,10 @@ class AuthService extends ChangeNotifier {
       final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
       final storedEmail = await _secureStorage.read(key: _emailKey);
 
-      if (kDebugMode) {
-        print('Auto-login check: has refresh=${refreshToken != null}, has email=${storedEmail != null}, has access=${token != null}');
-      }
-
       if (refreshToken != null) {
         // Always try to refresh on app start to get a fresh access token
         // This ensures the user stays logged in indefinitely
         // We can refresh even if email is missing - we'll fetch it from /me after refresh
-        if (kDebugMode) {
-          print('Auto-login: attempting token refresh...');
-        }
         final refreshed = await refreshTokenIfNeeded();
         if (refreshed) {
           // Get the updated access token
@@ -163,16 +126,10 @@ class AuthService extends ChangeNotifier {
           // Get email - use stored if available, otherwise fetch from /me
           String? emailToUse = storedEmail;
           if (emailToUse == null && _accessToken != null) {
-            if (kDebugMode) {
-              print('Auto-login: email missing, fetching from /me endpoint...');
-            }
             emailToUse = await _fetchEmailFromMe();
             if (emailToUse != null) {
               // Store the recovered email
               await _secureStorage.write(key: _emailKey, value: emailToUse);
-              if (kDebugMode) {
-                print('Auto-login: email recovered and stored: $emailToUse');
-              }
             }
           }
           
@@ -183,37 +140,24 @@ class AuthService extends ChangeNotifier {
           _profileComplete = profileCompleteStr == 'true';
           _status = AuthStatus.authenticated;
           _errorMessage = null;
-          if (kDebugMode) {
-            print('Auto-login: success. email=${_email != null ? "present" : "missing"}, profileComplete=$_profileComplete');
-          }
+          AppLog.info('Auth', 'User signed in');
         } else {
           // Refresh failed (400/401 or network) - _refreshToken already cleared on 400/401
           _status = AuthStatus.unauthenticated;
-          if (kDebugMode) {
-            print('Auto-login: refresh failed.');
-          }
         }
       } else if (token != null && storedEmail != null) {
         // Fallback: access token but no refresh token - can't persist, clear
-        if (kDebugMode) {
-          print('Auto-login: has access token but no refresh token, clearing.');
-        }
         await _clearAuth();
         _status = AuthStatus.unauthenticated;
       } else {
         // No stored credentials - don't clear (nothing to clear)
+        AppLog.debug('Auth', 'No stored refresh token on startup');
         _status = AuthStatus.unauthenticated;
-        if (kDebugMode) {
-          print('Auto-login: no stored credentials.');
-        }
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Auto-login');
+      AppLog.error('Auth', 'Auto-login failed', error: e, stackTrace: stack, recoverable: true);
       // Transient error (storage, network) - do NOT clear auth; keep tokens for retry
       _status = AuthStatus.unauthenticated;
-      if (kDebugMode) {
-        print('Auto-login: exception (keeping stored tokens): $e');
-      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -268,10 +212,7 @@ class AuthService extends ChangeNotifier {
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'tryAuthenticateWithExistingTokens');
-      if (kDebugMode) {
-        print('Error checking existing tokens: $e');
-      }
+      AppLog.error('Auth', 'Token authentication failed', error: e, stackTrace: stack, recoverable: true);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -294,25 +235,12 @@ class AuthService extends ChangeNotifier {
 
     try {
       final requestBody = jsonEncode({'email': normalizedEmail});
-      if (kDebugMode) {
-        print('=== API Request: Request Verification Code ===');
-        print('URL: ${ApiConfig.requestCodeEndpoint}');
-        print('Method: POST');
-        print('Headers: {Content-Type: application/json}');
-        print('Body: $requestBody');
-      }
 
-      final response = await http.post(
+      final response = await LoggedHttp.post(
         Uri.parse(ApiConfig.requestCodeEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
-
-      if (kDebugMode) {
-        print('=== API Response: Request Verification Code ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse response to verify it's valid
@@ -344,16 +272,13 @@ class AuthService extends ChangeNotifier {
         return false;
       }
     } on http.ClientException catch (e, stack) {
-      logApiError(e, stack, 'Request verification code (ClientException)');
+      AppLog.error('Auth', 'Failed to request verification code', error: e, stackTrace: stack, recoverable: true);
       _errorMessage = 'Network error: ${e.message}. Please check your connection.';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e, stack) {
-      logApiError(e, stack, 'Request verification code');
-      if (kDebugMode) {
-        print('Error requesting verification code: $e');
-      }
+      AppLog.error('Auth', 'Failed to request verification code', error: e, stackTrace: stack, recoverable: true);
       _errorMessage = 'Network error. Please check your connection.';
       _isLoading = false;
       notifyListeners();
@@ -385,33 +310,16 @@ class AuthService extends ChangeNotifier {
         'email': _email,
         'code': code,
       });
-      if (kDebugMode) {
-        print('=== API Request: Verify Code ===');
-        print('URL: ${ApiConfig.verifyCodeEndpoint}');
-        print('Method: POST');
-        print('Headers: {Content-Type: application/json}');
-        print('Body: $requestBody');
-      }
 
-      final response = await http.post(
+      final response = await LoggedHttp.post(
         Uri.parse(ApiConfig.verifyCodeEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Verify Code ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200) {
         // Parse the VerifyCodeResponse
         final responseBody = jsonDecode(response.body);
-        if (kDebugMode) {
-          print('Parsed Response: $responseBody');
-          print('profile_complete from response: ${responseBody['profile_complete']}');
-        }
         final tokens = VerifyCodeResponse.fromJson(responseBody);
         
         _accessToken = tokens.accessToken;
@@ -425,17 +333,14 @@ class AuthService extends ChangeNotifier {
           await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
           await _secureStorage.write(key: _emailKey, value: _email);
           await _secureStorage.write(key: _profileCompleteKey, value: _profileComplete.toString());
-          
-          if (kDebugMode) {
-            print('Tokens stored successfully. User will stay logged in.');
-            print('Profile complete from verify-code: $_profileComplete');
-          }
-        } catch (e) {
-          // If secure storage is unavailable (e.g., MissingPluginException), continue anyway
-          // Token will be stored in memory only until full rebuild
-          if (kDebugMode) {
-            print('Warning: Could not store token securely: $e');
-          }
+        } catch (e, stack) {
+          AppLog.error(
+            'Auth',
+            'Failed to persist auth tokens',
+            error: e,
+            stackTrace: stack,
+            recoverable: true,
+          );
         }
 
         // Double-check profile completion status by calling /me endpoint
@@ -445,24 +350,17 @@ class AuthService extends ChangeNotifier {
           if (profileStatus != null) {
             _profileComplete = profileStatus;
             await _secureStorage.write(key: _profileCompleteKey, value: _profileComplete.toString());
-            if (kDebugMode) {
-              print('Profile completion status verified from /me: $_profileComplete');
-            }
           }
         } catch (e) {
           // If /me endpoint fails, use the value from verify-code response
-          if (kDebugMode) {
-            print('Could not verify profile status from /me endpoint: $e');
-            print('Using profile_complete from verify-code response: $_profileComplete');
-          }
         }
 
-        _status = AuthStatus.authenticated;
-        _isLoading = false;
-        _errorMessage = null;
-        notifyListeners();
-        // Return true on successful verification (profileComplete is checked separately)
-        return true;
+          _status = AuthStatus.authenticated;
+          _isLoading = false;
+          _errorMessage = null;
+          notifyListeners();
+          AppLog.info('Auth', 'User signed in');
+          return true;
       } else {
         // Try to parse error message from response
         try {
@@ -485,10 +383,7 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e, stack) {
-      logApiError(e, stack, 'Verify code');
-      if (kDebugMode) {
-        print('Error verifying code: $e');
-      }
+      AppLog.error('Auth', 'Authentication failed', error: e, stackTrace: stack, recoverable: true);
       _errorMessage = 'Network error. Please check your connection.';
       _status = AuthStatus.codeSent;
       _isLoading = false;
@@ -508,45 +403,17 @@ class AuthService extends ChangeNotifier {
       try {
         // Try to call the refresh endpoint
         final requestBody = jsonEncode({'refresh_token': refreshToken});
-        if (kDebugMode) {
-          print('=== API Request: Refresh Token ===');
-          print('URL: ${ApiConfig.refreshTokenEndpoint}');
-          print('Method: POST');
-          print('Headers: {Content-Type: application/json}');
-          print('Body: ${requestBody.replaceAll(refreshToken, '[REDACTED]')}'); // Mask token in logs
-        }
 
-        final response = await http.post(
+        final response = await LoggedHttp.post(
           Uri.parse(ApiConfig.refreshTokenEndpoint),
           headers: {'Content-Type': 'application/json'},
           body: requestBody,
         ).timeout(const Duration(seconds: 10));
 
-        if (kDebugMode) {
-          print('=== API Response: Refresh Token ===');
-          print('Status Code: ${response.statusCode}');
-          // Mask tokens in response body for security
-          final maskedBody = response.body.replaceAllMapped(
-            RegExp(r'"access_token":"[^"]+"'),
-            (match) => '"access_token":"[REDACTED]"',
-          ).replaceAllMapped(
-            RegExp(r'"refresh_token":"[^"]+"'),
-            (match) => '"refresh_token":"[REDACTED]"',
-          );
-          print('Response Body: $maskedBody');
-        }
-
         if (response.statusCode == 200) {
           // Parse the VerifyCodeResponse (same format as verify-code endpoint)
           // Backend always returns: access_token, refresh_token (rotated), token_type
           final responseBody = jsonDecode(response.body);
-          if (kDebugMode) {
-            print('Parsed Response (tokens masked): ${responseBody.map((k, v) => MapEntry(
-              k,
-              (k == 'access_token' || k == 'refresh_token') ? '[REDACTED]' : v,
-            ))}');
-            print('profile_complete from response: ${responseBody['profile_complete']}');
-          }
           final tokens = VerifyCodeResponse.fromJson(responseBody);
           
           // Backend always rotates refresh tokens, so we always get a new one
@@ -561,9 +428,6 @@ class AuthService extends ChangeNotifier {
           if (tokens.profileComplete != null) {
             _profileComplete = tokens.profileComplete!;
             await _secureStorage.write(key: _profileCompleteKey, value: _profileComplete.toString());
-            if (kDebugMode) {
-              print('Profile completion status updated from refresh: $_profileComplete');
-            }
           } else {
             // If not in response, verify with /me endpoint
             try {
@@ -571,69 +435,34 @@ class AuthService extends ChangeNotifier {
               if (profileStatus != null) {
                 _profileComplete = profileStatus;
                 await _secureStorage.write(key: _profileCompleteKey, value: _profileComplete.toString());
-                if (kDebugMode) {
-                  print('Profile completion status verified from /me after refresh: $_profileComplete');
-                }
               }
             } catch (e) {
               // Keep existing value if check fails
-              if (kDebugMode) {
-                print('Could not verify profile status after refresh: $e');
-              }
             }
-          }
-          
-          if (kDebugMode) {
-            print('Token refreshed successfully. Refresh token rotated and stored.');
-            print('Profile complete: $_profileComplete');
           }
           
           return true;
         } else if (response.statusCode == 400) {
-          // Backend returns 400 for ValueError ("Invalid or expired refresh token")
-          if (kDebugMode) {
-            try {
-              final errorBody = jsonDecode(response.body);
-              print('Refresh token expired or invalid: ${errorBody['detail'] ?? 'Unknown error'}');
-            } catch (_) {
-              print('Refresh token expired or invalid (400 Bad Request)');
-            }
-          }
-          // Clear authentication - refresh token is invalid/expired
+          AppLog.warning('Auth', 'Authentication expired');
           await _clearAuth();
           return false;
         } else if (response.statusCode == 401) {
-          // Handle 401 for consistency (though backend uses 400)
-          if (kDebugMode) {
-            print('Refresh token unauthorized (401)');
-          }
+          AppLog.warning('Auth', 'Authentication expired');
           await _clearAuth();
           return false;
         } else {
           // Other error - server issue
-          if (kDebugMode) {
-            print('Refresh token request failed: ${response.statusCode}');
-          }
           return false;
         }
       } on http.ClientException catch (e) {
         // Network error - server is likely unavailable
-        if (kDebugMode) {
-          print('Network error refreshing token: ${e.message}');
-        }
         return false;
       } on Exception catch (e) {
         // Timeout or other network errors
-        if (kDebugMode) {
-          print('Error refreshing token: $e');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Refresh token');
-      if (kDebugMode) {
-        print('Error in refresh token flow: $e');
-      }
+      AppLog.error('Auth', 'Authentication expired', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -685,6 +514,7 @@ class AuthService extends ChangeNotifier {
     _accessToken = null;
     _errorMessage = null;
     _profileComplete = false;
+    AppLog.info('Auth', 'User signed out');
     notifyListeners();
   }
 
@@ -696,9 +526,6 @@ class AuthService extends ChangeNotifier {
       await _secureStorage.write(key: _profileCompleteKey, value: 'true');
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) {
-        print('Warning: Could not update profile complete status: $e');
-      }
     }
   }
 
@@ -713,9 +540,6 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       // If secure storage is unavailable (e.g., MissingPluginException during hot restart),
       // silently ignore - plugin will be available after full rebuild
-      if (kDebugMode) {
-        print('Warning: Could not clear secure storage: $e');
-      }
     }
   }
 
@@ -745,14 +569,8 @@ class AuthService extends ChangeNotifier {
     if (_accessToken == null) return null;
 
     try {
-      if (kDebugMode) {
-        print('=== API Request: Fetch Email (/me) ===');
-        print('URL: ${ApiConfig.baseUrl}/me');
-        print('Method: GET');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
 
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         Uri.parse('${ApiConfig.baseUrl}/me'),
         headers: {
           'Authorization': 'Bearer $_accessToken',
@@ -760,29 +578,15 @@ class AuthService extends ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 10));
 
-      if (kDebugMode) {
-        print('=== API Response: Fetch Email (/me) ===');
-        print('Status Code: ${response.statusCode}');
-      }
-
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
         final email = responseBody['email'] as String?;
-        if (kDebugMode) {
-          print('Fetched email from /me: ${email != null ? "present" : "missing"}');
-        }
         return email?.toLowerCase();
       } else {
-        if (kDebugMode) {
-          print('Failed to fetch email: ${response.statusCode}');
-        }
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Fetch email /me');
-      if (kDebugMode) {
-        print('Error fetching email from /me: $e');
-      }
+      AppLog.error('Auth', 'Failed to fetch user profile', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }
@@ -793,14 +597,8 @@ class AuthService extends ChangeNotifier {
     if (_accessToken == null) return null;
 
     try {
-      if (kDebugMode) {
-        print('=== API Request: Check Profile Status (/me) ===');
-        print('URL: ${ApiConfig.baseUrl}/me');
-        print('Method: GET');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-      }
 
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         Uri.parse('${ApiConfig.baseUrl}/me'),
         headers: {
           'Authorization': 'Bearer $_accessToken',
@@ -808,23 +606,11 @@ class AuthService extends ChangeNotifier {
         },
       ).timeout(const Duration(seconds: 10));
 
-      if (kDebugMode) {
-        print('=== API Response: Check Profile Status (/me) ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        if (kDebugMode) {
-          print('Parsed Profile Data: $responseBody');
-        }
         // Prefer backend's profile_complete when present (server/schemas/racer.py)
         final backendComplete = responseBody['profile_complete'];
         if (backendComplete is bool) {
-          if (kDebugMode) {
-            print('Using profile_complete from /me response: $backendComplete');
-          }
           return backendComplete;
         }
         // Fallback: compute from required fields matching server RacerBase.profile_complete
@@ -854,16 +640,10 @@ class AuthService extends ChangeNotifier {
 
         return isComplete;
       } else {
-        if (kDebugMode) {
-          print('Failed to check profile status: ${response.statusCode}');
-        }
         return null;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Profile completion /me');
-      if (kDebugMode) {
-        print('Error checking profile completion status: $e');
-      }
+      AppLog.error('Auth', 'Failed to check profile completion', error: e, stackTrace: stack, recoverable: true);
       return null;
     }
   }

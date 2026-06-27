@@ -28,6 +28,8 @@
   "invalidCode": "Invalid code. Please try again",
   "resendCode": "Resend Code",
   "didntReceiveCode": "Didn't receive a code?",
+  "resendCodeDialogTitle": "Resend verification code?",
+  "resendCodeDialogMessage": "Please check your spam or junk folder before requesting a new code. Verification emails are sometimes filtered there.",
   "codeExpired": "Code expired. Please request a new one",
   "verify": "Verify",
   "verifying": "Verifying...",
@@ -428,8 +430,21 @@
   "@addPWC": {
     "description": "Button to add a new PWC"
   },
-  "pwcName": "PWC Name",
-  "pwcNameHint": "Enter a name for your PWC",
+  "pwcName": "PWC racer number",
+  "pwcNameHint": "Enter your PWC racer number (digits only)",
+  "pwcRacerNumberDigitsOnly": "Use digits only (at least one digit)",
+  "@pwcRacerNumberDigitsOnly": {
+    "description": "Validation when PWC racer number contains non-digits or is invalid"
+  },
+  "pwcRacerNumberDisplay": "PWC racer #: {number}",
+  "@pwcRacerNumberDisplay": {
+    "description": "Subtitle line showing a registration's PWC racer number",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "editPWC": "Edit PWC",
   "@editPWC": {
     "description": "Title for editing a PWC"
@@ -489,6 +504,22 @@
   "continueOffline": "Continue Offline",
   "@continueOffline": {
     "description": "Button to continue without server (e.g. logout)"
+  },
+  "updateAvailableTitle": "Update Available",
+  "@updateAvailableTitle": {
+    "description": "Title for app update dialog"
+  },
+  "updateAvailableMessage": "A new version of HydroDrags is available.",
+  "@updateAvailableMessage": {
+    "description": "Intro message for app update dialog"
+  },
+  "updateButton": "Update",
+  "@updateButton": {
+    "description": "Button to open the app store for an update"
+  },
+  "updateLaterButton": "Later",
+  "@updateLaterButton": {
+    "description": "Button to dismiss optional update dialog"
   },
   "selectMake": "Select Make",
   "@selectMake": {
@@ -651,6 +682,10 @@
   "@continueToWaiver": {
     "description": "Button text to proceed to waiver"
   },
+  "continueToCheckout": "Continue to Checkout",
+  "@continueToCheckout": {
+    "description": "Button text to proceed to checkout when waiver is already signed"
+  },
   "completePayment": "Complete Payment",
   "@completePayment": {
     "description": "Button text to complete payment"
@@ -734,8 +769,8 @@
   "spectatorDayPasses": "Additional day passes (spectator tickets)",
   "spectatorDayPassesDescription": "Purchase additional day passes for spectators before checkout.",
   "dayPassesQuantity": "Number of day passes",
-  "spectatorSingleDayPass": "Single day pass ($30)",
-  "spectatorWeekendPass": "Weekend pass ($40)",
+  "spectatorSingleDayPass": "Single day pass",
+  "spectatorWeekendPass": "Weekend pass",
   "classesAndPwc": "Classes & PWC",
   "checkout": "Checkout",
   "orderSummary": "Order Summary",
@@ -762,6 +797,10 @@
   "spectatorTicketLookupByPhone": "Tickets can be looked up by your phone number at the gate.",
   "spectatorTicketsEmailedNote": "Your tickets have been emailed to you. If you don't see them, check your junk or spam folder.",
   "spectatorTicketCompleteNote": "We've emailed your tickets to you! If they're not in your inbox, check your junk or spam folder. You can also screenshot the tickets below, show this screen at the gate, or have staff look them up by phone number.",
+  "rulesTab": "Rules",
+  "@rulesTab": {
+    "description": "Bottom navigation label for the rules tab"
+  },
   "bracketsTab": "Brackets",
   "resultsTab": "Results",
   "noBracketsAvailable": "No brackets available yet",
@@ -774,5 +813,39 @@
   "speedSessionEnded": "Session ended",
   "speedSessionRemaining": "Time remaining",
   "speedSessionNotStarted": "Session not started",
-  "speedSessionActive": "Session in progress"
+  "speedSessionActive": "Session in progress",
+  "idCaptureFrontTitle": "Government ID — Front",
+  "idCaptureBackTitle": "Government ID — Back",
+  "idCaptureInstructionPrimary": "Place your government ID inside the frame",
+  "idCaptureFrontInstructionPrimary": "Take a photo of the front of your government ID",
+  "idCaptureBackInstructionPrimary": "Take a photo of the back of your government ID",
+  "idCaptureFrontSideLabel": "FRONT",
+  "idCaptureBackSideLabel": "BACK",
+  "idCaptureInstructionSecondary": "Fit your ID inside the frame · Keep all corners visible · Avoid glare",
+  "idCaptureBlurMessage": "This image appears blurry. Please retake the photo.",
+  "idCaptureGlareMessage": "Excessive glare detected. Please move the ID or change lighting.",
+  "idCaptureOcrMessage": "We couldn't clearly read your government ID. Please retake the photo.",
+  "idCaptureUsePhoto": "Use photo",
+  "idCaptureRetake": "Retake",
+  "idCaptureValidating": "Checking photo quality…",
+  "idCaptureUploading": "Uploading…",
+  "idCaptureSkipBack": "Skip back (optional)",
+  "selfieCaptureTitle": "Selfie verification",
+  "selfieInstructionPrimary": "Center your face inside the frame",
+  "selfieInstructionSecondary": "Look directly at the camera",
+  "selfieRemoveAccessoriesHint": "Remove sunglasses or hats",
+  "selfieFeedbackNoFace": "Center your face inside the frame",
+  "selfieFeedbackMoveCloser": "Move closer",
+  "selfieFeedbackMoveFarther": "Move farther away",
+  "selfieFeedbackCenterFace": "Center your face",
+  "selfieFeedbackNotFullyVisible": "Keep your full face visible",
+  "selfieFeedbackReady": "Hold still…",
+  "selfieBlurMessage": "Your selfie appears blurry. Please retake it.",
+  "selfieTooDarkMessage": "Increase the lighting and try again.",
+  "selfieTooBrightMessage": "Too much light detected. Adjust lighting and try again.",
+  "selfieNoFaceMessage": "Your face could not be detected. Please retake the selfie.",
+  "selfieMultipleFacesMessage": "Multiple faces detected. Only you should be in the photo.",
+  "selfieFaceSizeMessage": "Move closer or farther so your face fills the frame.",
+  "selfieValidating": "Checking selfie…",
+  "selfieUploading": "Uploading selfie…"
 }

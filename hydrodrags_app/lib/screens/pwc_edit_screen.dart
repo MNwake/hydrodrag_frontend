@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/pwc.dart';
 import '../services/auth_service.dart';
@@ -39,8 +40,8 @@ class _PWCEditScreenState extends State<PWCEditScreen> {
       return;
     }
 
-    final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    final racerNumber = _nameController.text.trim();
+    if (racerNumber.isEmpty) return;
 
     setState(() {
       _isSaving = true;
@@ -52,13 +53,13 @@ class _PWCEditScreenState extends State<PWCEditScreen> {
 
       bool success;
       if (widget.pwc?.id == null) {
-        // Add: POST /pwc with pwc_id (name)
-        success = await pwcService.addPWC(name);
+        // Add: POST /pwc with pwc_id (racer number)
+        success = await pwcService.addPWC(racerNumber);
       } else {
-        // Edit: PATCH with minimal PWC (name as make so displayName shows it)
+        // Edit: PATCH with minimal PWC (racer number as make so displayName shows it)
         final pwc = PWC(
           id: widget.pwc!.id,
-          make: name,
+          make: racerNumber,
           model: '',
           modifications: widget.pwc!.modifications,
         );
@@ -121,10 +122,15 @@ class _PWCEditScreenState extends State<PWCEditScreen> {
                 labelText: l10n.pwcName,
                 hintText: l10n.pwcNameHint,
               ),
-              textCapitalization: TextCapitalization.words,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
+                final v = value?.trim() ?? '';
+                if (v.isEmpty) {
                   return l10n.required;
+                }
+                if (!RegExp(r'^\d+$').hasMatch(v)) {
+                  return l10n.pwcRacerNumberDigitsOnly;
                 }
                 return null;
               },

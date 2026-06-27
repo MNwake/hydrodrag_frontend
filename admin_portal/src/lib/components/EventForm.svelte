@@ -8,7 +8,7 @@
 		EventLocation,
 		EventRule,
 		EventClass,
-		EventRegistrationStatus,
+		EventStatus,
 		EventFormat
 	} from '$lib/api/events';
 	import {
@@ -26,16 +26,17 @@
 	export let onsubmit: (payload: EventCreate | EventUpdate, pendingImageFile?: File | null) => void = () => {};
 	export let ondelete: (() => void) | undefined = undefined;
 	export let onUploadImage: ((file: File) => Promise<void>) | undefined = undefined;
+	/** View-only: disables all fields and hides save/delete/upload actions. */
+	export let readOnly = false;
 
 	let selectedImageFile: File | null = null;
 	let imageInputEl: HTMLInputElement;
 	let uploadingImage = false;
 
-	const statusOptions: { value: EventRegistrationStatus; label: string }[] = [
-		{ value: 'upcoming', label: 'Upcoming' },
-		{ value: 'open', label: 'Open' },
-		{ value: 'closed', label: 'Closed' },
-		{ value: 'past', label: 'Past' }
+	const statusOptions: { value: EventStatus; label: string }[] = [
+		{ value: 'draft', label: 'Draft' },
+		{ value: 'posted', label: 'Posted' },
+		{ value: 'completed', label: 'Completed' }
 	];
 
 	const formatOptions: { value: EventFormat; label: string }[] = [
@@ -81,14 +82,55 @@
 		return { category: '', description: '' };
 	}
 
-	function defaultClass(): EventClass & { id: string } {
+	type ClassListItem = EventClass & { id: string; isNew: boolean };
+
+	function classKeyFromName(name: string): string {
+		return name
+			.trim()
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')
+			.replace(/^_+|_+$/g, '');
+	}
+
+	function buildClassPayload(list: ClassListItem[]): EventClass[] {
+		const used = new Set<string>();
+		const payload: EventClass[] = [];
+
+		for (const cl of list) {
+			const name = cl.name.trim();
+			if (!name) continue;
+
+			let key = cl.isNew ? classKeyFromName(name) : (cl.key.trim() || classKeyFromName(name));
+			if (!key) continue;
+
+			const base = key;
+			let suffix = 2;
+			while (used.has(key)) {
+				key = `${base}_${suffix++}`;
+			}
+			used.add(key);
+
+			payload.push({
+				key,
+				name,
+				price: Number.isFinite(Number(cl.price)) ? Number(cl.price) : 0,
+				description: null,
+				is_active: !!cl.is_active
+			});
+		}
+
+		return payload;
+	}
+
+	function defaultClass(): ClassListItem {
 		return {
 			id: crypto.randomUUID(),
 			key: '',
 			name: '',
 			price: 0,
-			description: '',
-			is_active: true
+			description: null,
+			is_active: true,
+			isNew: true
 		};
 	}
 
@@ -113,9 +155,11 @@
 		? { ...initial.event_info, additional_info: { ...(initial.event_info.additional_info ?? {}) } }
 		: defaultEventInfo();
 	let format: EventFormat = (initial?.format as EventFormat) ?? 'double_elimination';
-	let registrationStatus: EventRegistrationStatus = initial?.registration_status ?? 'upcoming';
-	let isPublished = initial?.is_published ?? false;
-	let resultsUrl = initial?.results_url ?? '';
+	let eventStatus: EventStatus = initial?.event_status ?? 'draft';
+
+	function isPublishedForStatus(status: EventStatus): boolean {
+		return status === 'posted' || status === 'completed';
+	}
 
 	/** additional_info as editable list: Name (key) → Description (value) */
 	let additionalInfoList: { key: string; value: string }[] = initial?.event_info?.additional_info
@@ -128,12 +172,13 @@
 		: [];
 
 	/** event classes (key, name, price, etc.); id is client-only for list keying */
-	let classesList: (EventClass & { id: string })[] = (initial?.classes?.length)
+	let classesList: ClassListItem[] = initial?.classes?.length
 		? initial.classes.map((c) => ({
 				...c,
 				id: crypto.randomUUID(),
-				description: c.description ?? '',
-				is_active: c.is_active ?? true
+				description: c.description ?? null,
+				is_active: c.is_active ?? true,
+				isNew: false
 			}))
 		: [];
 
@@ -244,15 +289,8 @@
 			.filter((r) => r.category.trim() && r.description.trim())
 			.map((r) => ({ category: r.category.trim(), description: r.description.trim() }));
 
-		const classesFiltered: EventClass[] = classesList
-			.filter((c) => c.key.trim() && c.name.trim())
-			.map((c) => ({
-				key: c.key.trim(),
-				name: c.name.trim(),
-				price: Number.isFinite(Number(c.price)) ? Number(c.price) : 0,
-				description: (c.description ?? '').trim() || null,
-				is_active: !!c.is_active
-			}));
+		const classesFiltered = buildClassPayload(classesList);
+		const isPublished = isPublishedForStatus(eventStatus);
 
 		if (mode === 'create') {
 			const start = fromDatetimeLocal(startDate);
@@ -268,7 +306,7 @@
 				schedule: sched,
 				event_info: info,
 				format,
-				registration_status: registrationStatus,
+				event_status: eventStatus,
 				is_published: isPublished
 			};
 		}
@@ -286,8 +324,7 @@
 			format,
 			classes: classesFiltered,
 			rules: rulesFiltered,
-			registration_status: registrationStatus,
-			results_url: resultsUrl.trim() || null,
+			event_status: eventStatus,
 			is_published: isPublished
 		};
 		return update;
@@ -309,6 +346,7 @@
 
 	function handleSubmit(e: Event) {
 		e.preventDefault();
+		if (readOnly) return;
 		try {
 			onsubmit(buildPayload(), mode === 'create' ? selectedImageFile : undefined);
 		} catch (err) {
@@ -322,6 +360,7 @@
 		<div class="form-error" role="alert">{error}</div>
 	{/if}
 
+	<fieldset class="event-form-fieldset" disabled={readOnly}>
 	<details class="form-card form-card--collapsible" open>
 		<summary class="form-section-header">
 			<span class="form-section-title">Basic information</span>
@@ -560,16 +599,12 @@
 			<span class="form-section-chevron" aria-hidden="true">▾</span>
 		</summary>
 		<div class="form-section-body">
-		<p class="form-hint">Registration classes (e.g. Pro Stock, Novice). Key = stable id (e.g. pro_stock), name = display label, price = registration cost.</p>
+		<p class="form-hint">Registration classes (e.g. Pro Stock, Novice). Name is the display label; an internal key is generated automatically from the name.</p>
 		<div class="form-array form-array--rules">
 			{#each classesList as cl, idx (cl.id)}
 				<div class="form-array-item form-array-item--vertical rule-card">
 					<div class="form-array-item-fields">
 						<div class="form-row form-row--classes">
-							<div class="form-group">
-								<label for="class-key-{idx}">Key</label>
-								<input id="class-key-{idx}" type="text" bind:value={cl.key} placeholder="e.g. pro_stock" />
-							</div>
 							<div class="form-group">
 								<label for="class-name-{idx}">Name</label>
 								<input id="class-name-{idx}" type="text" bind:value={cl.name} placeholder="e.g. Pro Stock" />
@@ -584,10 +619,6 @@
 									Active
 								</label>
 							</div>
-						</div>
-						<div class="form-group">
-							<label for="class-desc-{idx}">Description</label>
-							<textarea id="class-desc-{idx}" bind:value={cl.description} placeholder="Optional" rows="2"></textarea>
 						</div>
 					</div>
 					<button type="button" class="btn btn-text btn-remove" on:click={() => removeClass(cl.id)} title="Remove class">✕</button>
@@ -632,47 +663,53 @@
 			<span class="form-section-chevron" aria-hidden="true">▾</span>
 		</summary>
 		<div class="form-section-body">
+		<p class="form-hint">Posted and completed events are visible to participants automatically.</p>
 		<div class="form-grid">
 			<div class="form-group">
-				<label for="reg_status">Registration status</label>
-				<select id="reg_status" bind:value={registrationStatus}>
+				<label for="event_status">Event status</label>
+				<select id="event_status" bind:value={eventStatus}>
 					{#each statusOptions as opt}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
 				</select>
 			</div>
-			<div class="form-group">
-				<label>
-					<input type="checkbox" bind:checked={isPublished} />
-					Published (visible to participants)
-				</label>
-			</div>
-			{#if mode === 'edit'}
-				<div class="form-group" style="grid-column: 1 / -1;">
-					<label for="results_url">Results URL</label>
-					<input id="results_url" type="url" bind:value={resultsUrl} placeholder="https://..." />
-				</div>
-			{/if}
 		</div>
 		</div>
 	</details>
+	</fieldset>
 
 	<div class="form-actions">
-		{#if mode === 'edit' && ondelete}
-			<button type="button" class="btn btn-danger btn-sm" on:click={ondelete} disabled={loading}>
-				Delete event
-			</button>
+		{#if readOnly}
+			<a href="/events" class="btn btn-secondary">← Back to events</a>
+			{#if mode === 'edit' && initial?.id}
+				<a href="/events/{initial.id}/manage" class="btn btn-primary">Manage registrations</a>
+			{/if}
+		{:else}
+			{#if mode === 'edit' && ondelete}
+				<button type="button" class="btn btn-danger btn-sm" on:click={ondelete} disabled={loading}>
+					Delete event
+				</button>
+			{/if}
+			<div style="margin-left: auto; display: flex; gap: 0.5rem;">
+				<a href="/events" class="btn btn-secondary">Cancel</a>
+				<button type="submit" class="btn btn-primary" disabled={loading}>
+					{loading ? 'Saving…' : mode === 'create' ? 'Create event' : 'Save changes'}
+				</button>
+			</div>
 		{/if}
-		<div style="margin-left: auto; display: flex; gap: 0.5rem;">
-			<a href="/events" class="btn btn-secondary">Cancel</a>
-			<button type="submit" class="btn btn-primary" disabled={loading}>
-				{loading ? 'Saving…' : mode === 'create' ? 'Create event' : 'Save changes'}
-			</button>
-		</div>
 	</div>
 </form>
 
 <style>
+	.event-form-fieldset {
+		border: none;
+		margin: 0;
+		padding: 0;
+		min-width: 0;
+	}
+	.event-form-fieldset:disabled {
+		opacity: 0.92;
+	}
 	.form-hint {
 		margin: 0 0 1rem;
 		font-size: 0.9rem;

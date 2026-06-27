@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../utils/logged_http.dart';
 import '../config/api_config.dart';
 import '../models/pwc.dart';
-import '../utils/api_error_logger.dart';
+import '../utils/app_log.dart';
 import 'auth_service.dart';
 
 /// Service for managing PWC (Personal Watercraft) data and API interactions
@@ -35,14 +35,7 @@ class PWCService {
 
       final uri = Uri.parse(ApiConfig.meEndpoint);
 
-      if (kDebugMode) {
-        print('=== API Request: Get PWCs (from /me) ===');
-        print('URL: $uri');
-        print('Method: GET');
-        print('Headers: {Authorization: Bearer [REDACTED]}');
-      }
-
-      final response = await http.get(
+      final response = await LoggedHttp.get(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
@@ -50,55 +43,35 @@ class PWCService {
         },
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Get PWCs (from /me) ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final pwcIdList = body['pwc_id'];
         final List<PWC> pwcs = [];
         if (pwcIdList != null && pwcIdList is List) {
           for (var i = 0; i < pwcIdList.length; i++) {
-            final name = pwcIdList[i]?.toString().trim() ?? '';
-            if (name.isEmpty) continue;
+            final racerNumber = pwcIdList[i]?.toString().trim() ?? '';
+            if (racerNumber.isEmpty) continue;
             pwcs.add(PWC(
-              id: name,
-              make: name,
+              id: racerNumber,
+              make: racerNumber,
               model: '',
             ));
           }
         }
-
-        if (kDebugMode) {
-          print('Loaded ${pwcs.length} PWCs from racer pwc_id');
-        }
         return pwcs;
       } else if (response.statusCode == 404) {
-        if (kDebugMode) {
-          print('No /me found (404) – returning empty list');
-        }
         return [];
       } else {
-        if (kDebugMode) {
-          print('Failed to get /me: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         throw Exception('Failed to load PWCs: ${response.statusCode}');
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Get PWCs');
-      if (kDebugMode) {
-        print('Error getting PWCs: $e');
-      }
+      AppLog.error('PwcService', 'Failed to fetch PWCs', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
 
-  /// Add a PWC by name (ID).
-  /// POST /pwc with body: `{"pwc_id": "<name>"}`
+  /// Add a PWC by racer number (stored as `pwc_id`).
+  /// POST /pwc with body: `{"pwc_id": "<racer number>"}`
   Future<bool> addPWC(String pwcId) async {
     try {
       await _authService.refreshTokenIfNeeded();
@@ -110,43 +83,19 @@ class PWCService {
       final uri = Uri.parse(ApiConfig.addPwcEndpoint);
       final requestBody = jsonEncode({'pwc_id': pwcId});
 
-      if (kDebugMode) {
-        print('=== API Request: Add PWC ===');
-        print('URL: $uri');
-        print('Method: POST');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-        print('Body: $requestBody');
-      }
-
-      final response = await http.post(
+      final response = await LoggedHttp.post(
         uri,
         headers: _getAuthHeaders(),
         body: requestBody,
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Add PWC ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('PWC added successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to add PWC: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Add PWC');
-      if (kDebugMode) {
-        print('Error adding PWC: $e');
-      }
+      AppLog.error('PwcService', 'Failed to add PWC', error: e, stackTrace: stack, recoverable: true);
       rethrow;
     }
   }
@@ -168,15 +117,7 @@ class PWCService {
       final uri = Uri.parse('${ApiConfig.baseUrl}/me/pwc/${pwc.id}');
       final requestBody = jsonEncode({'new_name': pwc.displayName});
 
-      if (kDebugMode) {
-        print('=== API Request: Update PWC ===');
-        print('URL: $uri');
-        print('Method: PATCH');
-        print('Headers: {Authorization: Bearer [REDACTED], Content-Type: application/json}');
-        print('Request Body: $requestBody');
-      }
-
-      final response = await http.patch(
+      final response = await LoggedHttp.patch(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
@@ -185,29 +126,13 @@ class PWCService {
         body: requestBody,
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Update PWC ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (kDebugMode) {
-          print('PWC updated successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to update PWC: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Update PWC');
-      if (kDebugMode) {
-        print('Error updating PWC: $e');
-      }
+      AppLog.error('PwcService', 'Failed to update PWC', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }
@@ -224,14 +149,7 @@ class PWCService {
 
       final uri = Uri.parse('${ApiConfig.baseUrl}/me/pwc/$pwcId');
 
-      if (kDebugMode) {
-        print('=== API Request: Delete PWC ===');
-        print('URL: $uri');
-        print('Method: DELETE');
-        print('Headers: {Authorization: Bearer [REDACTED]}');
-      }
-
-      final response = await http.delete(
+      final response = await LoggedHttp.delete(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
@@ -239,29 +157,13 @@ class PWCService {
         },
       );
 
-      if (kDebugMode) {
-        print('=== API Response: Delete PWC ===');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-
       if (response.statusCode == 200 || response.statusCode == 204) {
-        if (kDebugMode) {
-          print('PWC deleted successfully');
-        }
         return true;
       } else {
-        if (kDebugMode) {
-          print('Failed to delete PWC: ${response.statusCode}');
-          print('Response: ${response.body}');
-        }
         return false;
       }
     } catch (e, stack) {
-      logApiError(e, stack, 'Delete PWC');
-      if (kDebugMode) {
-        print('Error deleting PWC: $e');
-      }
+      AppLog.error('PwcService', 'Failed to delete PWC', error: e, stackTrace: stack, recoverable: true);
       return false;
     }
   }

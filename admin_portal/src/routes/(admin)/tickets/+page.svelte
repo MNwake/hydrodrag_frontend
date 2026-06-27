@@ -4,20 +4,24 @@
 		fetchTickets,
 		scanTicket,
 		undoScanTicket,
+		resendTicketEmail,
 		type SpectatorTicketBase,
 		type ScanTicketResponse
 	} from '$lib/api/tickets';
 	import { fetchEvents } from '$lib/api/events';
+	import { formatDateTimeLocal } from '$lib/format/datetime';
 
 	let loading = true;
 	let error: string | null = null;
 	let tickets: SpectatorTicketBase[] = [];
 	let events: { id: string; name: string }[] = [];
 	let filterEventId = '';
-	let filterUsed: '' | 'true' | 'false' = '';
+let filterUsed: '' | 'true' | 'false' = 'false';
 	let searchQuery = '';
 
 	let undoingCode: string | null = null;
+	let resendingCode: string | null = null;
+	let resendNotice: { ok: boolean; text: string } | null = null;
 	let scanCode = '';
 	let scanLoading = false;
 	let scanResult: {
@@ -161,9 +165,7 @@
 	}
 
 	function formatDate(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+		return formatDateTimeLocal(iso);
 	}
 
 	function ticketTypeLabel(t: SpectatorTicketBase): string {
@@ -187,6 +189,57 @@
 		scanCode = t.ticket_code;
 		scanResult = null;
 		setTimeout(() => scanInput?.focus(), 0);
+	}
+
+	async function handleResend(t: SpectatorTicketBase, e: Event) {
+		e.preventDefault();
+		e.stopPropagation();
+		resendNotice = null;
+		const code = t.ticket_code;
+		resendingCode = code;
+		try {
+			let res = await resendTicketEmail({ ticket_code: code });
+			if (
+				!res.ok &&
+				res.status === 400 &&
+				(res.error ?? '').toLowerCase().includes('no email on file')
+			) {
+				const prompted = window.prompt(
+					'No email on file for this ticket. Send QR ticket to:',
+					t.purchaser_email?.trim() ?? ''
+				);
+				if (prompted?.trim()) {
+					res = await resendTicketEmail({ ticket_code: code, to_email: prompted.trim() });
+				} else {
+					resendNotice = { ok: false, text: 'Resend cancelled (no address entered).' };
+					return;
+				}
+			}
+			if (!res.ok || !res.data) {
+				resendNotice = { ok: false, text: res.error ?? 'Resend failed.' };
+				return;
+			}
+			if (res.data.email_sent) {
+				resendNotice = {
+					ok: true,
+					text: `Email sent to ${res.data.to_email}.`
+				};
+			} else {
+				resendNotice = {
+					ok: false,
+					text: res.data.email_error
+						? `Email not sent: ${res.data.email_error}`
+						: 'Email not sent.'
+				};
+			}
+		} catch (err) {
+			resendNotice = {
+				ok: false,
+				text: err instanceof Error ? err.message : 'Request failed.'
+			};
+		} finally {
+			resendingCode = null;
+		}
 	}
 
 	async function handleUndo(t: SpectatorTicketBase, e: Event) {
@@ -361,6 +414,16 @@
 	</button>
 </div>
 
+{#if resendNotice}
+	<div
+		class="resend-notice"
+		class:resend-notice--ok={resendNotice.ok}
+		class:resend-notice--err={!resendNotice.ok}
+	>
+		{resendNotice.text}
+	</div>
+{/if}
+
 {#if loading}
 	<div class="loading-placeholder">Loading…</div>
 {:else if error}
@@ -411,18 +474,27 @@
 						<td data-label="Used at">{formatDate(t.used_at)}</td>
 						<td data-label="Created">{formatDate(t.created_at)}</td>
 						<td class="actions-col" data-label="Actions" onclick={(e) => e.stopPropagation()}>
-							{#if t.is_used}
+							<div class="action-btns">
 								<button
 									type="button"
 									class="btn btn-secondary btn-sm"
-									disabled={undoingCode === t.ticket_code}
-									onclick={(e) => handleUndo(t, e)}
+									disabled={resendingCode === t.ticket_code}
+									onclick={(e) => handleResend(t, e)}
+									title="Resend ticket"
 								>
-									{undoingCode === t.ticket_code ? 'Undoing…' : 'Undo'}
+									{resendingCode === t.ticket_code ? 'Sending…' : 'Resend ticket'}
 								</button>
-							{:else}
-								—
-							{/if}
+								{#if t.is_used}
+									<button
+										type="button"
+										class="btn btn-secondary btn-sm"
+										disabled={undoingCode === t.ticket_code}
+										onclick={(e) => handleUndo(t, e)}
+									>
+										{undoingCode === t.ticket_code ? 'Undoing…' : 'Undo scan'}
+									</button>
+								{/if}
+							</div>
 						</td>
 					</tr>
 				{/each}
@@ -547,8 +619,31 @@
 		outline: none;
 		box-shadow: inset 0 0 0 2px var(--primary);
 	}
+	.resend-notice {
+		margin-bottom: 1rem;
+		padding: 0.65rem 0.85rem;
+		border-radius: var(--radius);
+		font-size: 0.9rem;
+	}
+	.resend-notice--ok {
+		background: rgba(40, 140, 80, 0.12);
+		border: 1px solid rgba(40, 140, 80, 0.35);
+		color: var(--text);
+	}
+	.resend-notice--err {
+		background: rgba(200, 60, 60, 0.12);
+		border: 1px solid rgba(200, 60, 60, 0.3);
+		color: var(--text);
+	}
 	.actions-col {
 		white-space: nowrap;
+	}
+	.action-btns {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		align-items: center;
+		justify-content: flex-end;
 	}
 	.actions-col button {
 		margin: 0;

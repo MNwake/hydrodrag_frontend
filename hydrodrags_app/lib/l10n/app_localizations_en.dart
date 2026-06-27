@@ -75,6 +75,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get didntReceiveCode => 'Didn\'t receive a code?';
 
   @override
+  String get resendCodeDialogTitle => 'Resend verification code?';
+
+  @override
+  String get resendCodeDialogMessage => 'Please check your spam or junk folder before requesting a new code. Verification emails are sometimes filtered there.';
+
+  @override
   String get codeExpired => 'Code expired. Please request a new one';
 
   @override
@@ -667,10 +673,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addPWC => 'Add PWC';
 
   @override
-  String get pwcName => 'PWC Name';
+  String get pwcName => 'PWC racer number';
 
   @override
-  String get pwcNameHint => 'Enter a name for your PWC';
+  String get pwcNameHint => 'Enter your PWC racer number (digits only)';
+
+  @override
+  String get pwcRacerNumberDigitsOnly => 'Use digits only (at least one digit)';
+
+  @override
+  String pwcRacerNumberDisplay(String number) {
+    return 'PWC racer #: $number';
+  }
 
   @override
   String get editPWC => 'Edit PWC';
@@ -716,6 +730,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueOffline => 'Continue Offline';
+
+  @override
+  String get updateAvailableTitle => 'Update Available';
+
+  @override
+  String get updateAvailableMessage => 'A new version of HydroDrags is available.';
+
+  @override
+  String get updateButton => 'Update';
+
+  @override
+  String get updateLaterButton => 'Later';
 
   @override
   String get selectMake => 'Select Make';
@@ -834,6 +860,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueToWaiver => 'Continue to Waiver';
 
   @override
+  String get continueToCheckout => 'Continue to Checkout';
+
+  @override
   String get completePayment => 'Complete Payment';
 
   @override
@@ -909,10 +938,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dayPassesQuantity => 'Number of day passes';
 
   @override
-  String get spectatorSingleDayPass => 'Single day pass (\$30)';
+  String get spectatorSingleDayPass => 'Single day pass';
 
   @override
-  String get spectatorWeekendPass => 'Weekend pass (\$40)';
+  String get spectatorWeekendPass => 'Weekend pass';
 
   @override
   String get classesAndPwc => 'Classes & PWC';
@@ -993,10 +1022,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spectatorTicketCompleteNote => 'We\'ve emailed your tickets to you! If they\'re not in your inbox, check your junk or spam folder. You can also screenshot the tickets below, show this screen at the gate, or have staff look them up by phone number.';
 
   @override
-  String get bracketsTab => 'Brackets';
+  String get rulesTab => 'Rules';
 
   @override
-  String get rulesTab => 'Rules';
+  String get bracketsTab => 'Brackets';
 
   @override
   String get resultsTab => 'Results';
@@ -1033,4 +1062,106 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speedSessionActive => 'Session in progress';
+
+  @override
+  String get idCaptureFrontTitle => 'Government ID — Front';
+
+  @override
+  String get idCaptureBackTitle => 'Government ID — Back';
+
+  @override
+  String get idCaptureInstructionPrimary => 'Place your government ID inside the frame';
+
+  @override
+  String get idCaptureFrontInstructionPrimary => 'Take a photo of the front of your government ID';
+
+  @override
+  String get idCaptureBackInstructionPrimary => 'Take a photo of the back of your government ID';
+
+  @override
+  String get idCaptureFrontSideLabel => 'FRONT';
+
+  @override
+  String get idCaptureBackSideLabel => 'BACK';
+
+  @override
+  String get idCaptureInstructionSecondary => 'Fit your ID inside the frame · Keep all corners visible · Avoid glare';
+
+  @override
+  String get idCaptureBlurMessage => 'This image appears blurry. Please retake the photo.';
+
+  @override
+  String get idCaptureGlareMessage => 'Excessive glare detected. Please move the ID or change lighting.';
+
+  @override
+  String get idCaptureOcrMessage => 'We couldn\'t clearly read your government ID. Please retake the photo.';
+
+  @override
+  String get idCaptureUsePhoto => 'Use photo';
+
+  @override
+  String get idCaptureRetake => 'Retake';
+
+  @override
+  String get idCaptureValidating => 'Checking photo quality…';
+
+  @override
+  String get idCaptureUploading => 'Uploading…';
+
+  @override
+  String get idCaptureSkipBack => 'Skip back (optional)';
+
+  @override
+  String get selfieCaptureTitle => 'Selfie verification';
+
+  @override
+  String get selfieInstructionPrimary => 'Center your face inside the frame';
+
+  @override
+  String get selfieInstructionSecondary => 'Look directly at the camera';
+
+  @override
+  String get selfieRemoveAccessoriesHint => 'Remove sunglasses or hats';
+
+  @override
+  String get selfieFeedbackNoFace => 'Center your face inside the frame';
+
+  @override
+  String get selfieFeedbackMoveCloser => 'Move closer';
+
+  @override
+  String get selfieFeedbackMoveFarther => 'Move farther away';
+
+  @override
+  String get selfieFeedbackCenterFace => 'Center your face';
+
+  @override
+  String get selfieFeedbackNotFullyVisible => 'Keep your full face visible';
+
+  @override
+  String get selfieFeedbackReady => 'Hold still…';
+
+  @override
+  String get selfieBlurMessage => 'Your selfie appears blurry. Please retake it.';
+
+  @override
+  String get selfieTooDarkMessage => 'Increase the lighting and try again.';
+
+  @override
+  String get selfieTooBrightMessage => 'Too much light detected. Adjust lighting and try again.';
+
+  @override
+  String get selfieNoFaceMessage => 'Your face could not be detected. Please retake the selfie.';
+
+  @override
+  String get selfieMultipleFacesMessage => 'Multiple faces detected. Only you should be in the photo.';
+
+  @override
+  String get selfieFaceSizeMessage => 'Move closer or farther so your face fills the frame.';
+
+  @override
+  String get selfieValidating => 'Checking selfie…';
+
+  @override
+  String get selfieUploading => 'Uploading selfie…';
 }
